@@ -1,0 +1,59 @@
+cmake_minimum_required(VERSION 3.0)
+
+################################################################
+# Project basic configurations
+################################################################
+project(cuda_meanshift_seg LANGUAGES C CXX CUDA)
+find_package(CUDA REQUIRED)
+
+if(CUDA_FOUND)
+    message("CUDA found")
+    #turn CUDA_SEPARABLE_COMPILATION on.
+    set(CUDA_SEPARABLE_COMPILATION ON)
+    set(CUDA_64_BIT_DEVICE_CODE ON)
+    if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+        message("CUDA set to debug mode")
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -g -G)
+    elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+        message("CUDA set to release mode")
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -O3)
+    endif()
+    #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -rdc=true)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_52,code=sm_52)
+endif()
+
+set(CMAKE_BINARY_DIR cmake-build-debug)
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -g -ggdb")
+set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
+
+################################################################
+# Bundled library path
+################################################################
+include_directories(include)
+include_directories(lib/cimg-2.6.4)
+include_directories(lib/eigen-3.3.7)
+include_directories(lib/spdlog-1.3.1/include)
+
+################################################################
+# Submodules
+################################################################
+add_subdirectory(source/cuda_flooding)
+add_subdirectory(source/cuda_ms_filter)
+add_subdirectory(source/cuda_push_relabel)
+add_subdirectory(source/union_find)
+
+################################################################
+# Binary files
+################################################################
+option(opt_build_main "Build a main program to test functionalities" OFF)
+if(opt_build_main)
+    add_executable(main source/main.cpp)
+    target_link_libraries(main PRIVATE cuda_flooding)
+    target_link_libraries(main PRIVATE cuda_ms_fliter)
+    target_link_libraries(main PRIVATE cuda_push_relabel)
+    target_link_libraries(main PRIVATE union_find)
+endif()
