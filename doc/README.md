@@ -53,12 +53,12 @@ commit前记得改回来
 
 假设图像大小为w*h, x(x=1,3)个通道, 则:
 > data_1: 每行 w * x * sizeof(uint8_t), 共h行 \
-> data_2, data_3: 每行 w * 3 * sizeof(float), 共h行 \
+> data_2, data_3: 每行 w * sizeof(float), 共h * x行 \
 > label_1, label_2: 每行 w * sizeof(int), 共h行 
 
 3.使用cudaMemcpy2D将图像数据拷贝到data_1
 
-4.使用一个cuda核函数将原数据(uchar1/uchar3)转换为三通道浮点数据(float3)
+4.使用一个cuda核函数将原数据(uchar1/uchar3)转换为三通道浮点数据(float)
 
 单通道灰度数据转换: Gray=100, 则转换为R=G=B=Gray=100
 
@@ -84,23 +84,26 @@ commit前记得改回来
 
 #### cuda_ms_filter
 ```c++
-texture<float3, 2, cudaReadModeElementType> in_tex; //存储图像输入
+texture<float, 2, cudaReadModeElementType> in_tex; //存储图像输入
 
 template<int disrange=13, int max_iter=5>
-__kernel__ void mean_shift(float3 *output, 
+__kernel__ void mean_shift(float *output,
+                           int channels,
                            int pitch, 
                            int width,
                            int height,
                            float color_range,
                            float min_shift)
+}
 ```
 #### cuda_flooding
 ```c++
-texture<float3, 2, cudaReadModeElementType> in_tex; //存储图像输入
+texture<float, 2, cudaReadModeElementType> in_tex; //存储图像输入
 __shared__ neighbor_pixels[...]; //存储邻域像素值
 
 template<int radius=4>
 __kernel__ void flooding(int *output, 
+                         int channels,
                          int pitch, 
                          int width,
                          int height,
@@ -110,7 +113,7 @@ __kernel__ void flooding(int *output,
 ```
 #### cuda_union_find
 ```c++
-texture<float3, 2, cudaReadModeElementType> in_tex; //存储图像输入
+texture<float, 2, cudaReadModeElementType> in_tex; //存储图像输入
 __shared__ blk_labels[...];
 __shared__ blk_pixels[...]; //存储邻域像素值
 
