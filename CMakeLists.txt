@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.9)
 
 ################################################################
 # Project basic configurations
@@ -18,8 +18,6 @@ if(CUDA_FOUND)
         message("CUDA set to release mode")
         set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -O3)
     endif()
-    #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -rdc=true)
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_52,code=sm_52)
 endif()
 
 set(CMAKE_BINARY_DIR cmake-build-debug)
@@ -43,7 +41,7 @@ include_directories(lib/spdlog-1.3.1/include)
 ################################################################
 add_subdirectory(source/cuda_flooding)
 add_subdirectory(source/cuda_ms_filter)
-add_subdirectory(source/cuda_push_relabel)
+add_subdirectory(source/cuda_union_find)
 add_subdirectory(source/union_find)
 
 ################################################################
@@ -54,6 +52,6 @@ if(opt_build_main)
     add_executable(main source/main.cpp)
     target_link_libraries(main PRIVATE cuda_flooding)
     target_link_libraries(main PRIVATE cuda_ms_fliter)
-    target_link_libraries(main PRIVATE cuda_push_relabel)
+    target_link_libraries(main PRIVATE cuda_union_find)
     target_link_libraries(main PRIVATE union_find)
 endif()
