@@ -11,9 +11,10 @@ namespace CuMeanShift {
         void union_find(int *labels,
                         float *input,
                         int *new_labels,
-                        int *label_counter,
+                        int *label_count,
                         int pitch,
                         int width,
-                        int height);
+                        int height,
+                        float range);
     };
 }
