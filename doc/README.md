@@ -58,7 +58,12 @@ commit前记得改回来
 
 3.使用cudaMemcpy2D将图像数据拷贝到data_1
 
-4.使用一个cuda核函数将原数据(uchar1/uchar3)转换为三通道浮点数据(float)
+4.~~使用一个cuda核函数将原数据(uchar1/uchar3)转换为三通道浮点数据(float)~~
+不需要, Cimg<float>(图像路径)即可, 而且CImg存储图像是按RRRRR...GGGGG...BBBBB...格式的
+ 
+和OpenCV的RGBRGBRGB...存储方法不一样, 而且是连续存储, 每一行没有进行padding
+
+参考说明[here](https://stackoverflow.com/questions/21202635/cimg-library-creates-distorted-images-on-rotation)
 
 单通道灰度数据转换: Gray=100, 则转换为R=G=B=Gray=100
 
