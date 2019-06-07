@@ -1,24 +1,18 @@
 //
 // Created by iffi on 19-6-7.
 //
-#include <CImg.h>
 #include <cmath>
 #include <stack>
 #include <fstream>
 #include <iostream>
 
-#define max(x, y) ((x) > (y) ? (x) : (y))
-#define min(x, y) ((x) < (y) ? (x) : (y))
-#define color_is_same(a, b) (((a)[0] == (b)[0]) && ((a)[1] == (b)[1]) && ((a)[2] == (b)[2]))
-
 using namespace std;
-using namespace cimg_library;
 
 bool readBin(const char *path, float **data, size_t *count) {
     ifstream file(path, ios_base::in | ios_base::binary);
     if (!file.is_open())
         return false;
-    *count << file;
+    file.read((char*) count, sizeof(size_t));
     *data = new float[*count * sizeof(float)];
     file.read((char*) *data, *count * sizeof(float));
     file.close();
@@ -35,8 +29,11 @@ int main(int argc, char **argv) {
         cout << "Invalid argument number: " << argc - 1 << ", required is 2" << endl;
         return 1;
     }
+
     float *test, *ref;
     size_t test_size, ref_size;
+    size_t diff_grade[5] = {0};
+
     if (!readBin(argv[1], &test, &test_size)) {
         cout << "Failed to read test file" << endl;
         return 1;
@@ -45,27 +42,38 @@ int main(int argc, char **argv) {
         cout << "Failed to read ref file" << endl;
         return 1;
     }
-    CImg<float> img(argv[1]), org_img(img);
-    CImg<int> labels(img.width(), img.height(), 1, 1, -1);
-    if (img.is_empty()) {
-        cout << "Failed to read image" << endl;
-        return 1;
-    } else if (img.spectrum() != 3) {
-        cout << "Image should be 3-channels, get " << img.spectrum() << " channels" << endl;
-        return 1;
+
+    if (test_size != ref_size) {
+        cout << "Unmatched data count, test file: " << test_size << ", ref file: " << ref_size << endl;
+        return 2;
     }
 
-    cout << "Regions count:" << union_find(img, labels) << endl;
-
-    CImgDisplay disp(labels, "labels", 1);
-    disp.show();
-    while (!disp.is_closed()) {
-        disp.wait();
+    for(size_t i=0; i<ref_size; i++) {
+        float diff_ratio = abs(test[i] - ref[i]) / ref[i];
+        if (diff_ratio >= 0.1) {
+            diff_grade[0]++;
+        }
+        else if(diff_ratio >= 0.05) {
+            diff_grade[1]++;
+        }
+        else if(diff_ratio >= 0.01) {
+            diff_grade[2]++;
+        }
+        else if(diff_ratio >= 0.005) {
+            diff_grade[3]++;
+        }
+        else
+            diff_grade[4]++;
     }
 
-    if (!outputBin(argv[2], labels.size(), labels.data())) {
-        cout << "Failed to output bin file" << endl;
-        return 1;
-    }
+    delete [] test;
+    delete [] ref;
+
+    cout << "difference ratio:" << endl;
+    cout << ">= 10%:  " << diff_grade[0] * 1.0 / ref_size << "(" << diff_grade[0] << ")" << endl;
+    cout << ">= 5%:   " << diff_grade[1] * 1.0 / ref_size << "(" << diff_grade[0] << ")" << endl;
+    cout << ">= 1%:   " << diff_grade[2] * 1.0 / ref_size << "(" << diff_grade[0] << ")" << endl;
+    cout << ">= 0.5%: " << diff_grade[3] * 1.0 / ref_size << "(" << diff_grade[0] << ")" << endl;
+    cout << "< 0.5%:  " << diff_grade[4] * 1.0 / ref_size << "(" << diff_grade[0] << ")" << endl;
     return 0;
 }

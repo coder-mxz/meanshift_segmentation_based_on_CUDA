@@ -16,7 +16,7 @@ bool outputBin(const char *path, size_t count, float *data) {
     ofstream file(path, ios_base::out | ios_base::trunc | ios_base::binary);
     if (!file.is_open())
         return false;
-    file << count;
+    file.write((const char*)&count, sizeof(size_t));
     file.write((const char*)data, count * sizeof(float));
     file.close();
     return true;
@@ -134,6 +134,5 @@ int main(int argc, char **argv) {
         cout << "Failed to output bin file" << endl;
         return 1;
     }
-    img.save("1.png");
     return 0;
 }
