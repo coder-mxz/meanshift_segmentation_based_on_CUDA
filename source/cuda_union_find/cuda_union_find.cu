@@ -184,15 +184,15 @@ __global__ void _label_remap(int *labels, int *map, int count) {
 }
 
 namespace CuMeanShift {
-    template <int blk_w, int blk_h, int ch>
-    void CudaUnionFind<blk_w, blk_h, ch>::union_find(int *labels,
-                                                     float *input,
-                                                     int *new_labels,
-                                                     int *label_count,
-                                                     int pitch,
-                                                     int width,
-                                                     int height,
-                                                     float range) {
+    template <int blk_w, int blk_h, int ch, bool ign>
+    void CudaUnionFind<blk_w, blk_h, ch, ign>::union_find(int *labels,
+                                                          float *input,
+                                                          int *new_labels,
+                                                          int *label_count,
+                                                          int pitch,
+                                                          int width,
+                                                          int height,
+                                                          float range) {
         int *tmp_labels, *labels_map;
 
         /// create texture object
@@ -225,7 +225,7 @@ namespace CuMeanShift {
         cudaMalloc(&tmp_labels, width * height * sizeof(int));
         cudaMalloc(&labels_map, width * height * sizeof(int));
 
-        _local_union_find<blk_w, blk_h, ch><<<grid_1, block_1>>>(in_tex, new_labels, width, height, range);
+        _local_union_find<blk_w, blk_h, ch, ign><<<grid_1, block_1>>>(in_tex, new_labels, width, height, range);
         _boundary_analysis_h<blk_w, blk_h, ch><<<grid_2, block_1>>>(in_tex, new_labels, width, height, range);
         _boundary_analysis_v<blk_w, blk_h, ch><<<grid_3, block_1>>>(in_tex, new_labels, width, height, range);
         _global_path_compression<blk_w, blk_h, ch><<<grid_1, block_1>>>(new_labels, width, height);
