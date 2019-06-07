@@ -24,7 +24,7 @@ make all
 ```bash
 scripts/test_union_find.sh <test_path> && scripts/test_meanshift.sh <test_path2>
 ```
-`test_path`和`test_path2`问家家包含待测试模块的输出bin文件, 模块读取data文件夹下各个模块的输入数据, 然后用相同文件名输出到:
+`test_path`和`test_path2`文件夹包含待测试模块的输出bin文件, 模块读取data文件夹下各个模块的输入数据, 然后用相同文件名输出到:
 ```bash
 test_path/1.bin
 test_path/2.bin
