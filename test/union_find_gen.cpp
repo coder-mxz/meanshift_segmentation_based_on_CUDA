@@ -239,11 +239,13 @@ int main(int argc, char **argv) {
 
     cout << "Regions count:" << union_find(img, labels) << endl;
 
-    CImgDisplay disp(labels, "labels", 1);
-    disp.show();
-    while (!disp.is_closed()) {
-        disp.wait();
-    }
+    /*
+        CImgDisplay disp(labels, "labels", 1);
+        disp.show();
+        while (!disp.is_closed()) {
+            disp.wait();
+        }
+    */
 
     if (!outputBin(argv[2], labels.size(), labels.data())) {
         cout << "Failed to output bin file" << endl;

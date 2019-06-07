@@ -71,9 +71,9 @@ int main(int argc, char **argv) {
 
     cout << "difference ratio:" << endl;
     cout << ">= 10%:  " << diff_grade[0] * 1.0 / ref_size << "(" << diff_grade[0] << ")" << endl;
-    cout << ">= 5%:   " << diff_grade[1] * 1.0 / ref_size << "(" << diff_grade[0] << ")" << endl;
-    cout << ">= 1%:   " << diff_grade[2] * 1.0 / ref_size << "(" << diff_grade[0] << ")" << endl;
-    cout << ">= 0.5%: " << diff_grade[3] * 1.0 / ref_size << "(" << diff_grade[0] << ")" << endl;
-    cout << "< 0.5%:  " << diff_grade[4] * 1.0 / ref_size << "(" << diff_grade[0] << ")" << endl;
+    cout << ">= 5%:   " << diff_grade[1] * 1.0 / ref_size << "(" << diff_grade[1] << ")" << endl;
+    cout << ">= 1%:   " << diff_grade[2] * 1.0 / ref_size << "(" << diff_grade[2] << ")" << endl;
+    cout << ">= 0.5%: " << diff_grade[3] * 1.0 / ref_size << "(" << diff_grade[3] << ")" << endl;
+    cout << "< 0.5%:  " << diff_grade[4] * 1.0 / ref_size << "(" << diff_grade[4] << ")" << endl;
     return 0;
 }

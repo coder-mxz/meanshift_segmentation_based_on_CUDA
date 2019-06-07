@@ -122,14 +122,16 @@ int main(int argc, char **argv) {
         img(j, i, 2) = V;
     }
 
-    CImgDisplay disp(img, "filtered", 0);
-    CImgDisplay disp2(org_img, "original", 0);
-    disp.show();
-    disp2.show();
-    while (!disp.is_closed() && !disp2.is_closed()) {
-        disp.wait();
-        disp2.wait();
-    }
+    /*
+        CImgDisplay disp(img, "filtered", 0);
+        CImgDisplay disp2(org_img, "original", 0);
+        disp.show();
+        disp2.show();
+        while (!disp.is_closed() && !disp2.is_closed()) {
+            disp.wait();
+            disp2.wait();
+        }
+    */
     if (!outputBin(argv[2], img.size(), img.data())) {
         cout << "Failed to output bin file" << endl;
         return 1;
