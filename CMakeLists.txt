@@ -19,6 +19,7 @@ if(CUDA_FOUND)
         set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 -std=c++11")
     endif()
 endif()
+
 set(CMAKE_BINARY_DIR ${PROJECT_SOURCE_DIR}/build)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -43,6 +44,7 @@ add_subdirectory(source/cuda_ms_filter)
 add_subdirectory(source/cuda_union_find)
 add_subdirectory(source/union_find)
 add_subdirectory(test)
+
 ################################################################
 # Binary files
 ################################################################
