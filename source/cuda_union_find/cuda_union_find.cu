@@ -154,7 +154,6 @@ __global__ void _boundary_analysis_v(cudaTextureObject_t in_tex, int *labels, in
     }
 }
 
-template <int blk_w, int blk_h, int ch>
 __global__ void _global_path_compression(int *labels, int width, int height) {
     int blk_x_idx = blockIdx.x * blockDim.x;
     int blk_y_idx = blockIdx.y * blockDim.y;
@@ -181,7 +180,17 @@ __global__ void _global_path_compression(int *labels, int width, int height) {
 __global__ void _label_gen_map(int *labels, int *map, int count) {
     int gid = blockIdx.x * blockDim.x + threadIdx.x;
     if (gid < count) {
-        map[labels[gid]] = gid;
+        map[labels[gid]] = 1;
+    }
+}
+
+__global__ void _label_gen_idx(int *map, int *counter, int count) {
+    int gid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (gid < count) {
+        if (map[gid] > 0)
+            map[gid] = atomicAdd(counter, 1);
+        else
+            map[gid] = -1;
     }
 }
 
@@ -202,7 +211,7 @@ namespace CuMeanShift {
                                                           int width,
                                                           int height,
                                                           float range) {
-        int *tmp_labels, *labels_map;
+        int *labels_map;
 
         /// create texture object
         cudaResourceDesc res_desc;
@@ -232,7 +241,6 @@ namespace CuMeanShift {
 
         if (!ign)
             cudaMemcpy(new_labels, labels, width * height * sizeof(int), cudaMemcpyDeviceToDevice);
-        cudaMalloc(&tmp_labels, width * height * sizeof(int));
         cudaMalloc(&labels_map, width * height * sizeof(int));
 
         _local_union_find<blk_w, blk_h, ch, ign><<<grid_1, block_1>>>(in_tex, new_labels, width, height, range);
@@ -242,28 +250,24 @@ namespace CuMeanShift {
         if (width > blk_w)
             _boundary_analysis_v<blk_w, blk_h, ch><<<grid_3, block_1>>>(in_tex, new_labels, width, height, range);
 
-        _global_path_compression<blk_w, blk_h, ch><<<grid_1, block_1>>>(new_labels, width, height);
+        _global_path_compression<<<grid_1, block_1>>>(new_labels, width, height);
 
         cudaDeviceSynchronize();
-        /// count labels
-        cudaMemcpy(tmp_labels, new_labels, width * height * sizeof(int), cudaMemcpyDeviceToDevice);
-        thrust::device_ptr<int> labels_ptr(tmp_labels);
-        thrust::sort(thrust::device, labels_ptr, labels_ptr + width * height);
-        thrust::device_ptr<int> new_end = thrust::unique(thrust::device, labels_ptr, labels_ptr + width * height);
-        *label_count = new_end - labels_ptr;
+        /// count labels & remap labels
+        int *counter_dev;
+        dim3 block_map(blk_w * blk_h, 1);
+        dim3 grid_map(CEIL(width * height, blk_w * blk_h), 1);
 
-        /// remap labels
-        dim3 block_gen_map(blk_w * blk_h, 1);
-        dim3 grid_gen_map(CEIL(*label_count, blk_w * blk_h), 1);
-        dim3 block_remap(blk_w * blk_h, 1);
-        dim3 grid_remap(CEIL(width * height, blk_w * blk_h), 1);
-
-        _label_gen_map<<<grid_gen_map, block_gen_map>>>(tmp_labels, labels_map, *label_count);
-        _label_remap<<<grid_remap, block_remap>>>(new_labels, labels_map, width * height);
+        cudaMalloc(&counter_dev, sizeof(int));
+        cudaMemset(counter_dev, 0, sizeof(int));
+        _label_gen_map<<<grid_map, block_map>>>(new_labels, labels_map, width * height);
+        _label_gen_idx<<<grid_map, block_map>>>(labels_map, counter_dev, width * height);
+        _label_remap<<<grid_map, block_map>>>(new_labels, labels_map, width * height);
+        cudaMemcpy(label_count, counter_dev, sizeof(int), cudaMemcpyDeviceToHost);
+        cudaFree(counter_dev);
 
         cudaDeviceSynchronize();
         cudaDestroyTextureObject(in_tex);
-        cudaFree(tmp_labels);
         cudaFree(labels_map);
     }
 }
