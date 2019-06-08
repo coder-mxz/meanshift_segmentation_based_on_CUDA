@@ -40,6 +40,17 @@ int main(int argc, char *argv[])
     int label_count;
     size_t pitch;
     labels_h = new int[img.width() * img.height()];
+
+    /// pre-init
+    float *tmp;
+    cudaMalloc(&tmp, 1);
+    cudaFree(tmp);
+
+    cudaEvent_t begin, end;
+    cudaEventCreate(&begin);
+    cudaEventCreate(&end);
+    cudaEventRecord(begin);
+
     cudaMalloc(&labels, img.width() * img.height() * sizeof(int));
     cudaMallocPitch(
             &img_dev_data,
@@ -57,8 +68,15 @@ int main(int argc, char *argv[])
     uf.union_find(nullptr, img_dev_data, labels, &label_count, pitch, img.width(), img.height(), range);
     cudaMemcpy(labels_h, labels, img.width() * img.height() * sizeof(int), cudaMemcpyDeviceToHost);
 
+    cudaEventRecord(end);
+    cudaEventSynchronize(end);
+    float time;
+    cudaEventElapsedTime(&time, begin, end);
+    printf("%.2f ms\n", time);
+
+    cout << "Regions: " << label_count << endl;
     CImg<int> labels_img(labels_h, img.width(), img.height());
-    CImgDisplay disp(labels_img, "filtered", 0);
+    CImgDisplay disp(labels_img, "labels", 1);
     disp.show();
     while (!disp.is_closed()) {
         disp.wait();
