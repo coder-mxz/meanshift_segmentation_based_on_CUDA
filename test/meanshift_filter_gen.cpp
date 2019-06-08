@@ -49,22 +49,22 @@ int main(int argc, char **argv) {
 
     /// perform meanshift filtering
     /// Note: in cimg, x(j) is column and y(i) is row
-    cimg_forXY(img, j, i) {
+    cimg_forXY(org_img, j, i) {
         /// calculate L,U,V value for each pixel
         int ic = i;
         int jc = j;
         int ic_old, jc_old;
         float L_old, U_old, V_old;
-        float L = img(j, i, 0);
-        float U = img(j, i, 1);
-        float V = img(j, i, 2);
+        float L = org_img(j, i, 0);
+        float U = org_img(j, i, 1);
+        float V = org_img(j, i, 2);
         L = L * 100 / 255;
         U = U - 128;
         V = V - 128;
 
         double shift = 5;
-        int i2_from = max(0, i - spatial_radius), i2to = min(img.height(), i + spatial_radius + 1);
-        int j2_from = max(0, j - spatial_radius), j2to = min(img.width(), j + spatial_radius + 1);
+        int i2_from = max(0, i - spatial_radius), i2to = min(org_img.height(), i + spatial_radius + 1);
+        int j2_from = max(0, j - spatial_radius), j2to = min(org_img.width(), j + spatial_radius + 1);
         for (int iters = 0; shift > 3 && iters < 5; iters++) {
             ic_old = ic;
             jc_old = jc;
@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
 
             for (int i2 = i2_from; i2 < i2to; i2++) {
                 for (int j2 = j2_from; j2 < j2to; j2++) {
-                    float L2 = img(j2, i2, 0), U2 = img(j2, i2, 1), V2 = img(j2, i2, 2);
+                    float L2 = org_img(j2, i2, 0), U2 = org_img(j2, i2, 1), V2 = org_img(j2, i2, 2);
                     L2 = L2 * 100 / 255;
                     U2 = U2 - 128;
                     V2 = V2 - 128;
