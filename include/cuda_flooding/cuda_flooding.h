@@ -1,3 +1,6 @@
+#include <CImg.h>
+using namespace cimg_library;
+
 #include <cuda_device_runtime_api.h>
 #include <cuda_runtime.h>
 #ifdef __JETBRAINS_IDE__
@@ -23,5 +26,7 @@ public:
 
   void flooding(cudaTextureObject_t in_tex, int *output, int width, int height,
                 float color_range);
+
+  void _test_flooding(CImg<float> &img, int *output, float color_range);
 };
 }
