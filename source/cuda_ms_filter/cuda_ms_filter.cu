@@ -303,14 +303,15 @@ namespace CuMeanShift {
                                                           int dis_range,
                                                           float color_range,
                                                           float min_shift,
-                                                          int max_iter) {
+                                                          int max_iter,float3* host_res) {
         dim3 grid(16, 16);
         dim3 block(16, 16);
         _ms_filter << < grid, block >> > (img,dst,width,height,dis_range,color_range,min_shift,max_iter);
-        float3* host_res=(float3*)malloc(width*height* sizeof(float3));
+        //host_res=(float3*)malloc(width*height* sizeof(float3));
         cudaMemcpy(host_res, dst, sizeof(float3)*width*height, cudaMemcpyDeviceToHost);
         printf("hell0 %f %f %f\n", host_res[0].x,host_res[0].y,host_res[0].z);
         printf("hell0 %f %f %f\n", host_res[1].x,host_res[1].y,host_res[1].z);
+
         /// create texture object
         /*
         cudaResourceDesc res_desc;
