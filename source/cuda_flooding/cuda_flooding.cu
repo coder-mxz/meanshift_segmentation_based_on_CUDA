@@ -15,6 +15,23 @@ using namespace cimg_library;
 // texture<float, 2, cudaReadModeElementType> in_tex; //存储图像输入
 //#define IDX(x, y, s) ((y) * (s) + (x))
 
+#define BLOCK_SIZE 32
+
+template <int channels = 1, int radius = 4>
+__global__ void _new_flooding(float *input, int *output, int width, int height,
+                              float color_range) {
+  __shared__ float neighbor_pixels[channels][2 * radius + BLOCK_SIZE]
+                                  [2 * radius + BLOCK_SIZE];
+  int row = blockIdx.y * blockDim.y + threadIdx.y;
+  int col = blockIdx.x * blockDim.x + threadIdx.x;
+  // thread_id
+  int tid = threadIdx.y * blockDim.x + threadIdx.x;
+  // local thread_id
+  int ltid = tid % BLOCK_SIZE;
+
+  __syncwarp();
+}
+
 template <int channels = 1, int radius = 4>
 __global__ void _flooding(cudaTextureObject_t in_tex, int *output, int width,
                           int height, float color_range) {
@@ -25,7 +42,7 @@ __global__ void _flooding(cudaTextureObject_t in_tex, int *output, int width,
   for (int i = 0; i < channels; i++) {
     if (x >= 0 && x < height && y >= 0 && y < width) {
       float debug_value = tex2D<float>(in_tex, y, x + i * height);
-      //neighbor_pixels[x * width + y + i] = debug_value;
+      // neighbor_pixels[x * width + y + i] = debug_value;
       if (debug_value != 0.0f) {
         printf("(%d, %d): %f\n", x, y, debug_value);
       }
@@ -39,9 +56,9 @@ __global__ void _flooding(cudaTextureObject_t in_tex, int *output, int width,
         if (xx >= 0 && xx < height && yy >= 0 && yy < width) {
           float delta_luv = 0.0f;
           for (int k = 0; k < channels; k++) {
-            //float delta = neighbor_pixels[x * width + y + k] -
+            // float delta = neighbor_pixels[x * width + y + k] -
             //              neighbor_pixels[xx * width + yy + k];
-            //delta_luv += delta * delta;
+            // delta_luv += delta * delta;
           }
           if (delta_luv < color_range) {
             printf("%f\n", delta_luv);
