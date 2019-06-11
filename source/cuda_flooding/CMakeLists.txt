@@ -1,7 +1,7 @@
 set(CMAKE_CXX_STANDARD 14)
 
-add_library(cuda_flooding SHARED cuda_flooding_impl.cu cuda_flooding.cu main.cpp)
-#add_library(cuda_flooding SHARED cuda_flooding_impl.cu)
+#add_library(cuda_flooding SHARED cuda_flooding_impl.cu cuda_flooding.cu main.cpp)
+add_library(cuda_flooding SHARED cuda_flooding_impl.cu)
 add_executable(cuda_flooding_test main.cpp)
 
 ################################################################
