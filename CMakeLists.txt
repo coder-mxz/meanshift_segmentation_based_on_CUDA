@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.14)
+set(CMAKE_CXX_STANDARD 14)
+add_library(union_find SHARED union_find.cpp)
+include_directories(../../lib/cimg-2.6.4)
+target_include_directories(union_find PRIVATE ../../include/union_find)
+add_executable(union_find_test union_find.cpp)
