@@ -18,14 +18,14 @@ using namespace cimg_library;
 template <int channels = 1, int radius = 4>
 __global__ void _flooding(cudaTextureObject_t in_tex, int *output, int width,
                           int height, float color_range) {
-  __shared__ extern float neighbor_pixels[]; //存储邻域像素值
+  //__shared__ extern float neighbor_pixels[]; //存储邻域像素值
   int x = threadIdx.x + blockDim.x * blockIdx.x;
   int y = threadIdx.y + blockDim.y * blockIdx.y;
   output[x * width + y] = x * width + y;
   for (int i = 0; i < channels; i++) {
     if (x >= 0 && x < height && y >= 0 && y < width) {
       float debug_value = tex2D<float>(in_tex, y, x + i * height);
-      neighbor_pixels[x * width + y + i] = debug_value;
+      //neighbor_pixels[x * width + y + i] = debug_value;
       if (debug_value != 0.0f) {
         printf("(%d, %d): %f\n", x, y, debug_value);
       }
@@ -39,9 +39,9 @@ __global__ void _flooding(cudaTextureObject_t in_tex, int *output, int width,
         if (xx >= 0 && xx < height && yy >= 0 && yy < width) {
           float delta_luv = 0.0f;
           for (int k = 0; k < channels; k++) {
-            float delta = neighbor_pixels[x * width + y + k] -
-                          neighbor_pixels[xx * width + yy + k];
-            delta_luv += delta * delta;
+            //float delta = neighbor_pixels[x * width + y + k] -
+            //              neighbor_pixels[xx * width + yy + k];
+            //delta_luv += delta * delta;
           }
           if (delta_luv < color_range) {
             printf("%f\n", delta_luv);
