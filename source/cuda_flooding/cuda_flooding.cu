@@ -151,11 +151,11 @@ __global__ void _naive_flooding(Image img, int *output, float color_range) {
   float min_delta = 999999.0f;
   int minr = row;
   int minc = col;
-  printf("(%d, %d)\n", row, col);
+  // printf("(%d, %d)\n", row, col);
   __syncthreads();
   if (row < img.height && col < img.width) {
     output[row * img.width + col] = row * img.width + col;
-    printf("(%d, %d): %f\n", row, col, _get_element(img, row, col, 0));
+    // printf("(%d, %d): %f\n", row, col, _get_element(img, row, col, 0));
   }
 
   __syncthreads();
@@ -255,12 +255,11 @@ void _cpu_flooding(CImg<float> &img, int *output, float color_range) {
     for (int row = 0; row < img.height(); row++) {
       for (int col = 0; col < img.width(); col++) {
         float min_delta_luv = 999999.0f;
-        int minr = row.minc = col;
+        int minr = row, minc = col;
         for (int r = -radius; r < 0; r++) {
-          float delta_luv = 0.0f;
           int rr = row + r, cc = col + r;
           float delta_luv = 0.0f;
-          if (rr >= 0 && rr < img.height() &&) {
+          if (rr >= 0 && rr < img.height()) {
             for (int chn = 0; chn < channels; chn++) {
               float delta =
                   img.atXY(col, row, 0, chn) - img.atXY(col, rr, 0, chn);
@@ -273,7 +272,7 @@ void _cpu_flooding(CImg<float> &img, int *output, float color_range) {
             }
           }
           delta_luv = 0.0f;
-          if (cc >= 0 && cc < img.height() &&) {
+          if (cc >= 0 && cc < img.height()) {
             for (int chn = 0; chn < channels; chn++) {
               float delta =
                   img.atXY(col, row, 0, chn) - img.atXY(cc, row, 0, chn);
@@ -286,7 +285,9 @@ void _cpu_flooding(CImg<float> &img, int *output, float color_range) {
             }
           }
         }
-        output[row * img.width() + col] = output[minr * img.width() + minc];
+        if (min_delta_luv < color_range) {
+          output[row * img.width() + col] = output[minr * img.width() + minc];
+        }
       }
     }
   }
@@ -355,7 +356,7 @@ void CudaFlooding<blk_width, blk_height, channels, radius>::_test_flooding(
   // cudaFreeArray(arr);
   cudaMemcpy(output, d_output, sizeof(int) * img.width() * img.height(),
              cudaMemcpyDeviceToHost);
-  _cpu_flooding<channels, radius>(img, outpur, color_range);
+  _cpu_flooding<channels, radius>(img, output, color_range);
   cudaFree(d_img);
   cudaFree(d_output);
 }
