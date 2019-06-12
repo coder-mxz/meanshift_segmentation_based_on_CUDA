@@ -12,7 +12,6 @@ __global__ void _ms_filter(cudaTextureObject_t in_tex,
                            int pitch,
                            int dis_range,
                            float color_range,
-                           float min_shift,
                            int max_iter) {
     int blk_x_idx = blockIdx.x * blockDim.x;
     int blk_y_idx = blockIdx.y * blockDim.y;
@@ -48,14 +47,15 @@ __global__ void _ms_filter(cudaTextureObject_t in_tex,
         float mV = 0;
         int num = 0;
 
+//#pragma unroll
         for (int i2 = i2_from; i2 < i2to; i2++) {
             for (int j2 = j2_from; j2 < j2to; j2++) {
                 float L2 = tex2D<float>(in_tex, j2, i2 + height * 0),
                         U2 = tex2D<float>(in_tex, j2, i2 + height * 1),
                         V2 = tex2D<float>(in_tex, j2, i2 + height * 2);
-                if (i == 0 && j == 0) {
-                    printf("%f %f %f %d %d %f \n", L2, U2, V2, j2, i2, tex2D<float>(in_tex, 0, 0 + height * 2));
-                }
+//                if (i == 0 && j == 0) {
+//                    printf("%f %f %f %d %d %f \n", L2, U2, V2, j2, i2, tex2D<float>(in_tex, 0, 0 + height * 2));
+//                }
                 L2 = L2 * 100 / 255;
                 U2 = U2 - 128;
                 V2 = V2 - 128;
@@ -97,16 +97,16 @@ __global__ void _ms_filter(cudaTextureObject_t in_tex,
 }
 
 namespace CuMeanShift {
-    template<int blk_w, int blk_h, int ch, bool ign>
-    void CudaMsFilter<blk_w, blk_h, ch, ign>::ms_filter_luv(float *input,
-                                                            float *output,
-                                                            int width,
-                                                            int height,
-                                                            int pitch,
-                                                            int dis_range,
-                                                            float color_range,
-                                                            float min_shift,
-                                                            int max_iter) {
+    template<int blk_w, int blk_h, int ch>
+    void CudaMsFilter<blk_w, blk_h, ch>::ms_filter_luv(float *input,
+                                                       float *output,
+                                                       int width,
+                                                       int height,
+                                                       int pitch,
+                                                       int dis_range,
+                                                       float color_range,
+                                                       float min_shift,
+                                                       int max_iter) {
         dim3 block(blk_w, blk_h);
         dim3 grid(CEIL(width, blk_w), CEIL(height, blk_h));
 
@@ -131,7 +131,7 @@ namespace CuMeanShift {
         cudaTextureObject_t in_tex = 0;
         cudaCreateTextureObject(&in_tex, &res_desc, &tex_desc, NULL);
         _ms_filter << < grid, block >> >
-                              (in_tex, output, width, height, pitch, dis_range, color_range, min_shift, max_iter);
+                              (in_tex, output, width, height, pitch, dis_range, color_range, max_iter);
         cudaDeviceSynchronize();
         cudaDestroyTextureObject(in_tex);
     }
