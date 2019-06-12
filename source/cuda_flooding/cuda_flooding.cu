@@ -151,6 +151,7 @@ __global__ void _naive_flooding(Image img, int *output, float color_range) {
   float min_delta = 999999.0f;
   int minr = row;
   int minc = col;
+  printf("(%d, %d)\n", row, col);
   __syncthreads();
   if (row < img.height && col < img.width) {
     output[row * img.width + col] = row * img.width + col;
@@ -184,7 +185,8 @@ __global__ void _naive_flooding(Image img, int *output, float color_range) {
           minc = col + r;
         }
       }
-      if (min_delta < color_range) {
+      if (min_delta < color_range && minr >= 0 && minr < img.height &&
+          minc >= 0 && minc < img.width) {
         output[row * img.width + col] = output[minr * img.width + minc];
       }
     }
@@ -240,6 +242,54 @@ void CudaFlooding<blk_width, blk_height, channels, radius>::flooding(
       <<<grid_1, block_1, sizeof(float) * width * height * channels>>>(
           in_tex, output, width, height, color_range);
   cudaDeviceSynchronize();
+}
+
+template <int channels = 1, int radius = 4>
+void _cpu_flooding(CImg<float> &img, int *output, float color_range) {
+  for (int row = 0; row < img.height(); row++) {
+    for (int col = 0; col < img.width(); col++) {
+      output[row * img.width() + col] = row * img.width() + col;
+    }
+  }
+  for (int _i = 0; _i < LOOP_TIMES; _i++) {
+    for (int row = 0; row < img.height(); row++) {
+      for (int col = 0; col < img.width(); col++) {
+        float min_delta_luv = 999999.0f;
+        int minr = row.minc = col;
+        for (int r = -radius; r < 0; r++) {
+          float delta_luv = 0.0f;
+          int rr = row + r, cc = col + r;
+          float delta_luv = 0.0f;
+          if (rr >= 0 && rr < img.height() &&) {
+            for (int chn = 0; chn < channels; chn++) {
+              float delta =
+                  img.atXY(col, row, 0, chn) - img.atXY(col, rr, 0, chn);
+              delta_luv += delta * delta;
+            }
+            if (delta_luv < min_delta_luv) {
+              min_delta_luv = delta_luv;
+              minr = rr;
+              minc = col;
+            }
+          }
+          delta_luv = 0.0f;
+          if (cc >= 0 && cc < img.height() &&) {
+            for (int chn = 0; chn < channels; chn++) {
+              float delta =
+                  img.atXY(col, row, 0, chn) - img.atXY(cc, row, 0, chn);
+              delta_luv += delta * delta;
+            }
+            if (delta_luv < min_delta_luv) {
+              min_delta_luv = delta_luv;
+              minr = row;
+              minc = cc;
+            }
+          }
+        }
+        output[row * img.width() + col] = output[minr * img.width() + minc];
+      }
+    }
+  }
 }
 
 template <int blk_width, int blk_height, int channels, int radius>
@@ -305,6 +355,7 @@ void CudaFlooding<blk_width, blk_height, channels, radius>::_test_flooding(
   // cudaFreeArray(arr);
   cudaMemcpy(output, d_output, sizeof(int) * img.width() * img.height(),
              cudaMemcpyDeviceToHost);
+  _cpu_flooding<channels, radius>(img, outpur, color_range);
   cudaFree(d_img);
   cudaFree(d_output);
 }
