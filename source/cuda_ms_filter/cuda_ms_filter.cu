@@ -73,7 +73,7 @@ __global__ void _ms_filter(cudaTextureObject_t in_tex,
         float mV = 0.0f;
         int num = 0.0f;
 
-#pragma unroll 20
+#pragma unroll 
         for (int i2 = i2_from; i2 < i2to; i2++) {
             for (int j2 = j2_from; j2 < j2to; j2++) {
                 float L2 = neighbor_pixels[0][j2 - blk_x_idx + dis_range][i2 - blk_y_idx + dis_range],
