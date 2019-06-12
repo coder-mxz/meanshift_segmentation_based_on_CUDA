@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
   // process image
   int *output = new int[WIDTH * HEIGHT];
   memset(output, 0, sizeof(int) * WIDTH * HEIGHT);
-  f._test_flooding(img, output, 0.000001f);
+  f._test_flooding(img, output, 1.0f);
 
   // show image
   for (int x = 0; x < WIDTH; x++) {

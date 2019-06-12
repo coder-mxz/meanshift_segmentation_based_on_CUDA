@@ -83,9 +83,9 @@ __global__ void _new_flooding(Image img, int *output, float color_range) {
               neighbor_pixels[chn][r][c] =
                   _get_element(img, ir * block_height + r - radius,
                                ic * block_width + c - radius, chn);
-              printf("(%d, %d): %f\n", r, c,
-                     _get_element(img, ir * block_height + r - radius,
-                                  ic * block_width + c - radius, chn));
+              //printf("(%d, %d): %f\n", r, c,
+              //       _get_element(img, ir * block_height + r - radius,
+              //                    ic * block_width + c - radius, chn));
             }
           }
         }
@@ -193,10 +193,59 @@ template <int channels = 1, int radius = 4>
 __global__ void _new_naive_flooding(Image img, int *output, float color_range) {
   int row = blockIdx.y * blockDim.y + threadIdx.y;
   int col = blockIdx.x * blockDim.x + threadIdx.x;
-  float min_delta = 999999.0f;
-  int min_row = row;
-  int min_col = col;
-
+  if (row < img.height) {
+    if (col < img.width) {
+      output[row * img.width + col] = (row * img.width + col) * 10;
+      //printf("(%d, %d): %f\n", row, col, _get_element(img, row, col, 0));
+    }
+  }
+  __syncthreads();
+  for (int _i = 0; _i < LOOP_TIMES; _i++) {
+    if (row < img.height) {
+      if (col < img.width) {
+        // process every pixel
+        float min_delta_luv = 999999.0f;
+        int min_row = 999999, min_col = 999999;
+        for (int r = -radius; r < 0; r++) {
+          int cur_row = row + r, cur_col = col + r;
+          // find up
+          if (cur_row >= 0) {
+            float delta_luv = 0.0f;
+            for (int chn = 0; chn < channels; chn++) {
+              float delta = _get_element(img, cur_row, col, chn) -
+                            _get_element(img, row, col, chn);
+              // img.atXY(col, cur_row, 0, chn) - img.atXY(col, row, 0, chn);
+              delta_luv += delta * delta;
+            }
+            if (delta_luv < min_delta_luv) {
+              min_delta_luv = delta_luv;
+              min_row = cur_row;
+              min_col = col;
+            }
+          }
+          // find left
+          if (cur_col >= 0) {
+            float delta_luv = 0.0f;
+            for (int chn = 0; chn < channels; chn++) {
+              float delta = _get_element(img, row, cur_col, chn) -
+                            _get_element(img, row, col, chn);
+              delta_luv += delta * delta;
+            }
+            if (delta_luv < min_delta_luv) {
+              min_delta_luv = delta_luv;
+              min_row = row;
+              min_col = cur_col;
+            }
+          }
+        }
+        // set label
+        if (min_delta_luv < color_range) {
+          output[row * img.width + col] = output[min_row * img.width + min_col];
+        }
+      }
+    }
+    __syncthreads();
+  }
 }
 
 template <int channels = 1, int radius = 4>
@@ -299,6 +348,7 @@ void _cpu_flooding(CImg<float> &img, int *output, float color_range) {
   }
 }
 
+// latest naive flooding function, let one thread flood one pixel
 template <int channels = 1, int radius = 4>
 void _new_cpu_flooding(CImg<float> &img, int *output, float color_range) {
   // initial labels
@@ -359,42 +409,11 @@ template <int blk_width, int blk_height, int channels, int radius>
 void CudaFlooding<blk_width, blk_height, channels, radius>::_test_flooding(
     CImg<float> &img, int *output, float color_range) {
   int *d_output = nullptr;
-  // cudaDeviceReset();
+  // malloc device labels array
   cudaMalloc((void **)&d_output, sizeof(int) * img.width() * img.height());
   cudaMemset(d_output, 0, sizeof(int) * img.width() * img.height());
 
-  /*for (int x = 0; x < img.width(); x++) {
-    for (int y = 0; y < img.height(); y++) {
-      float debug_value = img.atXY(x, y, 0, 0);
-      if (debug_value != 0.0f) {
-        printf("(%d, %d): %f\n", x, y, debug_value);
-      }
-    }
-  }*/
-
-  /*cudaChannelFormatDesc desc = cudaCreateChannelDesc<float>();
-  cudaArray *arr;
-  cudaMallocArray(&arr, &desc, img.width(), img.height());
-  cudaMemcpyToArray(arr, 0, 0, img.data(),
-                    sizeof(float) * img.width() * img.height(),
-                    cudaMemcpyHostToDevice);
-
-  cudaResourceDesc res_desc;
-  memset(&res_desc, 0, sizeof(res_desc));
-  res_desc.resType = cudaResourceTypeArray;
-  res_desc.res.array.array = arr;
-
-  cudaTextureDesc tex_desc;
-  memset(&tex_desc, 0, sizeof(tex_desc));
-  tex_desc.readMode = cudaReadModeElementType;
-  tex_desc.addressMode[0] = cudaAddressModeBorder;
-  tex_desc.addressMode[1] = cudaAddressModeBorder;
-  tex_desc.filterMode = cudaFilterModePoint;
-
-  cudaTextureObject_t in_tex = 0;
-  cudaCreateTextureObject(&in_tex, &res_desc, &tex_desc, NULL);
-
-  flooding(in_tex, d_output, img.width(), img.height(), color_range);*/
+  // malloc device image data array
   float *d_img = nullptr;
   cudaMalloc((void **)&d_img,
              sizeof(float) * img.width() * img.height() * img.spectrum());
@@ -406,19 +425,20 @@ void CudaFlooding<blk_width, blk_height, channels, radius>::_test_flooding(
   d_image.stride = d_image.width = img.width();
   d_image.height = img.height();
   d_image.data = d_img;
+
   dim3 block_1(blk_width, blk_height);
   dim3 grid_1(CEIL(img.width(), blk_width), CEIL(img.height(), blk_height));
   //_new_flooding<channels, radius, blk_width, blk_height>
-  //    <<<grid_1, block_1>>>(d_image, output, color_range);
+  //    <<<grid_1, block_1>>>(d_image, d_output, color_range);
   //_helloFromGPU<<<1, 10>>>();
-  //_naive_flooding<channels, radius>
-  //    <<<grid_1, block_1>>>(d_image, output, color_range);
+  _new_naive_flooding<channels, radius>
+      <<<grid_1, block_1>>>(d_image, d_output, color_range);
   cudaDeviceSynchronize();
-  // cudaDestroyTextureObject(in_tex);
-  // cudaFreeArray(arr);
+
+  // copy labels back to host
   cudaMemcpy(output, d_output, sizeof(int) * img.width() * img.height(),
              cudaMemcpyDeviceToHost);
-  _new_cpu_flooding<channels, radius>(img, output, color_range);
+  //_new_cpu_flooding<channels, radius>(img, output, color_range);
   cudaFree(d_img);
   cudaFree(d_output);
 }
