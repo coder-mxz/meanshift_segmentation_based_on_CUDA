@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
   // process image
   int *output = new int[WIDTH * HEIGHT];
   memset(output, 0, sizeof(int) * WIDTH * HEIGHT);
-  f._test_flooding(img, output, 1.0f);
+  f._test_flooding(img, output, 0.000001f);
 
   // show image
   for (int x = 0; x < WIDTH; x++) {
@@ -64,8 +64,14 @@ int main(int argc, char *argv[]) {
   }
 
   CImgDisplay disp1(orig_img, "original image", 1);
-  displayImage(disp1);
+  // displayImage(disp1);
 
   CImgDisplay disp2(labels, "labels", 1);
-  displayImage(disp2);
+  // displayImage(disp2);
+  disp1.show();
+  disp2.show();
+  while (!disp1.is_closed() || !disp2.is_closed()) {
+    disp1.wait();
+    disp2.wait();
+  }
 }
