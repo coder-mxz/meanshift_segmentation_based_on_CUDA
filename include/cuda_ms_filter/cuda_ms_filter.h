@@ -18,7 +18,6 @@ namespace CuMeanShift {
                            int pitch,
                            int dis_range,
                            float color_range,
-                           float min_shift,
                            int max_iter);
     };
 }

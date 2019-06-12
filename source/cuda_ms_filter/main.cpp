@@ -68,15 +68,15 @@ int main(int argc, char *argv[]) {
             img.height() * img.spectrum(),
             cudaMemcpyHostToDevice);
     CudaMsFilter<16, 16, 3> uf;
-    uf.ms_filter_luv(cuda_input, cuda_output, img.width(), img.height(), pitch, spatial_radius, color_radius, 5, 5);
+    uf.ms_filter_luv(cuda_input, cuda_output, img.width(), img.height(), pitch, spatial_radius, color_radius, 5);
     cudaMemcpy(output, cuda_output, img.width() * img.height() * img.spectrum() * sizeof(float),
                cudaMemcpyDeviceToHost);
     CImg<float> labels_img(output, img.width(), img.height(), 1, 3);
     CImgDisplay disp(labels_img, "labels", 2);
-//    disp.show();
-//    while (!disp.is_closed()) {
-//        disp.wait();
-//    }
+    disp.show();
+    while (!disp.is_closed()) {
+        disp.wait();
+    }
 //    for (int i = 0; i < min(img.height(), 10); ++i) {
 //        for (int j = 0; j < min(img.with(), 10); ++j) {
 //            printf("%f %f %f\n", img(j, i, 0), img(j, i, 1), img(j, i, 2));

@@ -5,14 +5,14 @@
 #include <cuda_ms_filter/cuda_ms_filter.h>
 #include <driver_types.h>
 
+template<int max_iter = 5>
 __global__ void _ms_filter(cudaTextureObject_t in_tex,
                            float *output,
                            int width,
                            int height,
                            int pitch,
                            int dis_range,
-                           float color_range,
-                           int max_iter) {
+                           float color_range) {
     int blk_x_idx = blockIdx.x * blockDim.x;
     int blk_y_idx = blockIdx.y * blockDim.y;
     int j = blk_x_idx + threadIdx.x;
@@ -105,7 +105,6 @@ namespace CuMeanShift {
                                                        int pitch,
                                                        int dis_range,
                                                        float color_range,
-                                                       float min_shift,
                                                        int max_iter) {
         dim3 block(blk_w, blk_h);
         dim3 grid(CEIL(width, blk_w), CEIL(height, blk_h));
@@ -130,8 +129,8 @@ namespace CuMeanShift {
 
         cudaTextureObject_t in_tex = 0;
         cudaCreateTextureObject(&in_tex, &res_desc, &tex_desc, NULL);
-        _ms_filter << < grid, block >> >
-                              (in_tex, output, width, height, pitch, dis_range, color_range, max_iter);
+        _ms_filter<5> << < grid, block >> >
+                                 (in_tex, output, width, height, pitch, dis_range, color_range);
         cudaDeviceSynchronize();
         cudaDestroyTextureObject(in_tex);
     }
