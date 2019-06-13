@@ -56,6 +56,102 @@ __device__ inline Image _get_sub_image(Image img, int row, int col) {
 
 template <int channels = 1, int radius = 4, int block_width = 32,
           int block_height = 32>
+__global__ void _share_flooding(Image img, int *output, float color_range) {
+  __shared__ float neighbor_pixels[channels][radius + block_height]
+                                  [radius + block_width];
+  int blockRow = blockIdx.y;
+  int blockCol = blockIdx.x;
+  int threadRow = threadIdx.y;
+  int threadCol = threadIdx.x;
+  int row = blockIdx.y * blockDim.y + threadIdx.y;
+  int col = blockIdx.x * blockDim.x + threadIdx.x;
+  // set labels
+  if (row < img.height) {
+    if (col < img.width) {
+      output[row * img.width + col] = (row * img.width + col) * 10;
+    }
+  }
+  __syncthreads();
+  // process block_width*block_height(32*32) sub image
+  // for (int blockRow = 0; blockRow < CEIL(img.height, block_height);
+  // blockRow++) {
+  //  for (int blockCol = 0; blockCol < CEIL(img.width, block_width);
+  //  blockCol++) {
+  // load data to share memory
+  for (int r = threadRow; r < radius + block_height; r += block_height) {
+    for (int c = threadCol; c < radius + block_width; c += block_width) {
+      if (r < radius + block_height && c < radius + block_width) {
+        for (int chn = 0; chn < channels; chn++) {
+          if (blockRow * block_height + r - radius >= 0 &&
+              blockRow * block_height + r - radius < radius + block_height &&
+              blockCol * block_width + c - radius >= 0 &&
+              blockCol * block_width + c - radius < radius + block_width) {
+            neighbor_pixels[chn][r][c] =
+                _get_element(img, blockRow * block_height + r - radius,
+                             blockCol * block_width + c - radius, chn);
+          } else {
+            neighbor_pixels[chn][r][c] = -999999.0f;
+          }
+        }
+      }
+    }
+  }
+  __syncthreads();
+  // process LOOP_TIMES(20) times to flooding image.
+  for (int _i = 0; _i < LOOP_TIMES; _i++) {
+    // relative to row
+    int subThreadRow = blockRow * block_height + threadRow;
+    // relative to col
+    int subThreadCol = blockCol * block_width + threadCol;
+    if (subThreadRow < img.height && subThreadCol < img.width) {
+      float min_delta_luv = 999999.0f;
+      int min_row = 999999, min_col = 999999;
+      int cur_thread_row = threadRow + radius;
+      int cur_thread_col = threadCol + radius;
+      for (int r = -radius; r < 0; r++) {
+        int cur_row = cur_thread_row + r, cur_col = cur_thread_col + r;
+        // find up
+        if (cur_row >= 0) {
+          float delta_luv = 0.0f;
+          for (int chn = 0; chn < channels; chn++) {
+            float delta = neighbor_pixels[chn][cur_row][cur_thread_col] -
+                          neighbor_pixels[chn][cur_thread_row][cur_thread_col];
+            delta_luv += delta * delta;
+          }
+          if (delta_luv < min_delta_luv) {
+            min_delta_luv = delta_luv;
+            min_row = subThreadRow + r;
+            min_col = subThreadCol;
+          }
+        }
+        // find left
+        if (cur_col >= 0) {
+          float delta_luv = 0.0f;
+          for (int chn = 0; chn < channels; chn++) {
+            float delta = neighbor_pixels[chn][cur_thread_row][cur_col] -
+                          neighbor_pixels[chn][cur_thread_row][cur_thread_col];
+            delta_luv += delta * delta;
+          }
+          if (delta_luv < min_delta_luv) {
+            min_delta_luv = delta_luv;
+            min_row = subThreadRow;
+            min_col = subThreadCol + r;
+          }
+        }
+      }
+      // set label
+      if (min_delta_luv < color_range) {
+        output[subThreadRow * img.width + subThreadCol] =
+            output[min_row * img.width + min_col];
+      }
+    }
+  }
+  //}
+  //}
+}
+
+template <int channels = 1, int radius = 4, int block_width = 32,
+          int block_height = 32>
 __global__ void _new_flooding(Image img, int *output, float color_range) {
   __shared__ float neighbor_pixels[channels][radius + block_height + radius]
                                   [radius + block_width + radius];
@@ -83,7 +179,7 @@ __global__ void _new_flooding(Image img, int *output, float color_range) {
               neighbor_pixels[chn][r][c] =
                   _get_element(img, ir * block_height + r - radius,
                                ic * block_width + c - radius, chn);
-              //printf("(%d, %d): %f\n", r, c,
+              // printf("(%d, %d): %f\n", r, c,
               //       _get_element(img, ir * block_height + r - radius,
               //                    ic * block_width + c - radius, chn));
             }
@@ -196,7 +292,7 @@ __global__ void _new_naive_flooding(Image img, int *output, float color_range) {
   if (row < img.height) {
     if (col < img.width) {
       output[row * img.width + col] = (row * img.width + col) * 10;
-      //printf("(%d, %d): %f\n", row, col, _get_element(img, row, col, 0));
+      // printf("(%d, %d): %f\n", row, col, _get_element(img, row, col, 0));
     }
   }
   __syncthreads();
@@ -428,11 +524,11 @@ void CudaFlooding<blk_width, blk_height, channels, radius>::_test_flooding(
 
   dim3 block_1(blk_width, blk_height);
   dim3 grid_1(CEIL(img.width(), blk_width), CEIL(img.height(), blk_height));
-  //_new_flooding<channels, radius, blk_width, blk_height>
-  //    <<<grid_1, block_1>>>(d_image, d_output, color_range);
-  //_helloFromGPU<<<1, 10>>>();
-  _new_naive_flooding<channels, radius>
+  _share_flooding<channels, radius, blk_width, blk_height>
       <<<grid_1, block_1>>>(d_image, d_output, color_range);
+  //_helloFromGPU<<<1, 10>>>();
+  //_new_naive_flooding<channels, radius>
+  //    <<<grid_1, block_1>>>(d_image, d_output, color_range);
   cudaDeviceSynchronize();
 
   // copy labels back to host
