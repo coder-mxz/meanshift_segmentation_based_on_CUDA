@@ -53,7 +53,12 @@ int main(int argc, char *argv[]) {
 
   // process image
   int *output = new int[WIDTH * HEIGHT];
-  memset(output, 0, sizeof(int) * WIDTH * HEIGHT);
+  // memset(output, 0, sizeof(int) * WIDTH * HEIGHT);
+  for (int x = 0; x < WIDTH; x++) {
+    for (int y = 0; y < HEIGHT; y++) {
+      output[y * WIDTH + x] = (y * WIDTH + x) * 10;
+    }
+  }
   f._test_flooding(img, output, 1.0f);
 
   // show image
