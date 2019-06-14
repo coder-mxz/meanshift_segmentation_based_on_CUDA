@@ -152,6 +152,87 @@ __global__ void _share_flooding(Image img, int *output, float color_range) {
 
 template <int channels = 1, int radius = 4, int block_width = 32,
           int block_height = 32>
+__global__ void _new_share_flooding(Image img, int *output, float color_range) {
+  __shared__ float neighbor_pixels[channels][radius + block_height]
+                                  [radius + block_width];
+  int blockRow = blockIdx.y;
+  int blockCol = blockIdx.x;
+  int threadRow = threadIdx.y;
+  int threadCol = threadIdx.x;
+  int row = blockIdx.y * blockDim.y + threadIdx.y;
+  int col = blockIdx.x * blockDim.x + threadIdx.x;
+  // load data to share memory
+  for (int r = threadRow; r < radius + block_height; r += block_height) {
+    for (int c = threadCol; c < radius + block_width; c += block_width) {
+      if (r < radius + block_height && c < radius + block_width) {
+        for (int chn = 0; chn < channels; chn++) {
+          if (blockRow * block_height + r - radius >= 0 &&
+              blockRow * block_height + r - radius < img.height &&
+              blockCol * block_width + c - radius >= 0 &&
+              blockCol * block_width + c - radius < img.width) {
+            neighbor_pixels[chn][r][c] =
+                _get_element(img, blockRow * block_height + r - radius,
+                             blockCol * block_width + c - radius, chn);
+          } else {
+            neighbor_pixels[chn][r][c] = -999999.0f;
+          }
+        }
+      }
+    }
+  }
+  __syncthreads();
+  // process LOOP_TIMES(20) times to flooding image.
+  for (int _i = 0; _i < LOOP_TIMES; _i++) {
+    if (row < img.height && col < img.width) {
+      float min_delta_luv = 999999.0f;
+      int min_row = 999999, min_col = 999999;
+      // output[row * img.width + col] =
+      //    neighbor_pixels[0][threadRow + radius][threadCol + radius];
+      for (int r = 0; r < radius; r++) {
+        int cur_row = threadRow + r, cur_col = threadCol + r;
+        // find up
+        if (row - radius + r >= 0) {
+          float delta_luv = 0.0f;
+          for (int chn = 0; chn < channels; chn++) {
+            float delta =
+                neighbor_pixels[chn][cur_row][threadCol + radius] -
+                neighbor_pixels[chn][threadRow + radius][threadCol + radius];
+            delta_luv += delta * delta;
+          }
+          if (delta_luv < min_delta_luv) {
+            min_delta_luv = delta_luv;
+            min_row = row - radius + r;
+            min_col = col;
+          }
+        }
+        // find left
+        if (col - radius + r >= 0) {
+          float delta_luv = 0.0f;
+          for (int chn = 0; chn < channels; chn++) {
+            float delta =
+                neighbor_pixels[chn][threadRow + radius][cur_col] -
+                neighbor_pixels[chn][threadRow + radius][threadCol + radius];
+            delta_luv += delta * delta;
+          }
+          if (delta_luv < min_delta_luv) {
+            min_delta_luv = delta_luv;
+            min_row = row;
+            min_col = col - radius + r;
+          }
+        }
+      }
+      if (min_delta_luv < color_range) {
+        output[row * img.width + col] = output[min_row * img.width + min_col];
+        // if (_i == 0) {
+        //  printf("(%d, %d)\n", row, col);
+        //}
+      }
+    }
+  }
+}
+
+template <int channels = 1, int radius = 4, int block_width = 32,
+          int block_height = 32>
 __global__ void _new_flooding(Image img, int *output, float color_range) {
   __shared__ float neighbor_pixels[channels][radius + block_height + radius]
                                   [radius + block_width + radius];
@@ -385,14 +466,41 @@ __global__ void _flooding(cudaTextureObject_t in_tex, int *output, int width,
 namespace CuMeanShift {
 template <int blk_width, int blk_height, int channels, int radius>
 void CudaFlooding<blk_width, blk_height, channels, radius>::flooding(
-    cudaTextureObject_t in_tex, int *output, int width, int height,
-    float color_range) {
+    CImg<float> &img, int *output, float color_range) {
+  int *d_output = nullptr;
+  for (int x = 0; x < img.width(); x++) {
+    for (int y = 0; y < img.height(); y++) {
+      output[y * img.width() + x] = (y * img.width() + x) * 10;
+    }
+  }
+  // malloc device labels array
+  cudaMalloc((void **)&d_output, sizeof(int) * img.width() * img.height());
+  // copy labels to device
+  cudaMemcpy(d_output, output, sizeof(int) * img.width() * img.height(),
+             cudaMemcpyHostToDevice);
+  // malloc device image data array
+  float *d_img = nullptr;
+  cudaMalloc((void **)&d_img,
+             sizeof(float) * img.width() * img.height() * img.spectrum());
+  cudaMemcpy(d_img, img.data(),
+             sizeof(float) * img.width() * img.height() * img.spectrum(),
+             cudaMemcpyHostToDevice);
+  Image d_image;
+  d_image.channels = channels;
+  d_image.stride = d_image.width = img.width();
+  d_image.height = img.height();
+  d_image.data = d_img;
+  // launch kernel
   dim3 block_1(blk_width, blk_height);
-  dim3 grid_1(CEIL(width, blk_width), CEIL(height, blk_height));
-  _flooding<channels, radius>
-      <<<grid_1, block_1, sizeof(float) * width * height * channels>>>(
-          in_tex, output, width, height, color_range);
+  dim3 grid_1(CEIL(img.width(), blk_width), CEIL(img.height(), blk_height));
+  _new_share_flooding<channels, radius, blk_width, blk_height>
+      <<<grid_1, block_1>>>(d_image, d_output, color_range);
   cudaDeviceSynchronize();
+  // copy labels back to host
+  cudaMemcpy(output, d_output, sizeof(int) * img.width() * img.height(),
+             cudaMemcpyDeviceToHost);
+  cudaFree(d_img);
+  cudaFree(d_output);
 }
 
 template <int channels = 1, int radius = 4>
@@ -507,7 +615,10 @@ void CudaFlooding<blk_width, blk_height, channels, radius>::_test_flooding(
   int *d_output = nullptr;
   // malloc device labels array
   cudaMalloc((void **)&d_output, sizeof(int) * img.width() * img.height());
-  cudaMemset(d_output, 0, sizeof(int) * img.width() * img.height());
+  // copy labels to device
+  cudaMemcpy(d_output, output, sizeof(int) * img.width() * img.height(),
+             cudaMemcpyHostToDevice);
+  // cudaMemset(d_output, 0, sizeof(int) * img.width() * img.height());
 
   // malloc device image data array
   float *d_img = nullptr;
@@ -524,7 +635,7 @@ void CudaFlooding<blk_width, blk_height, channels, radius>::_test_flooding(
 
   dim3 block_1(blk_width, blk_height);
   dim3 grid_1(CEIL(img.width(), blk_width), CEIL(img.height(), blk_height));
-  _share_flooding<channels, radius, blk_width, blk_height>
+  _new_share_flooding<channels, radius, blk_width, blk_height>
       <<<grid_1, block_1>>>(d_image, d_output, color_range);
   //_helloFromGPU<<<1, 10>>>();
   //_new_naive_flooding<channels, radius>
