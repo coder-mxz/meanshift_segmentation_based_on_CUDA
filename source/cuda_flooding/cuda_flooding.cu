@@ -223,6 +223,9 @@ namespace CuMeanShift {
             case 16:
                 _propagateLabels<16><<<grid2, block2>>> (prop_id, size);
                 break;
+            default:
+                _propagateLabels<16><<<grid2, block2>>> (prop_id, size);
+                break;
         }
 
 
