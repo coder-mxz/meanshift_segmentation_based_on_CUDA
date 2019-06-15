@@ -8,7 +8,7 @@ namespace CuMeanShift {
     template <int blk_width=32, int blk_height=32, int channels=1, bool ignore_labels=false>
     class CudaUnionFind {
     public:
-        void union_find(int *labels,
+        void unionFind(int *labels,
                         float *input,
                         int *new_labels,
                         int *label_count,

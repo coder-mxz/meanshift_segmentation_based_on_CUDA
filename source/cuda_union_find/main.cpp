@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
             img.width() * sizeof(float),
             img.height() * img.spectrum(),
             cudaMemcpyHostToDevice);
-    uf.union_find(nullptr, img_dev_data, labels, &label_count, pitch, img.width(), img.height(), range);
+    uf.unionFind(nullptr, img_dev_data, labels, &label_count, pitch, img.width(), img.height(), range);
     cudaMemcpy(labels_h, labels, img.width() * img.height() * sizeof(int), cudaMemcpyDeviceToHost);
 
     cudaEventRecord(end);

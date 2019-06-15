@@ -1,10 +1,5 @@
 set(CMAKE_CXX_STANDARD 14)
 
-if (CUDA_FOUND)
-    #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -rdynamic -lineinfo -g -G")
-endif ()
-
-#add_library(cuda_flooding SHARED cuda_flooding_impl.cu cuda_flooding.cu main.cpp)
 add_library(cuda_flooding SHARED cuda_flooding_impl.cu)
 add_executable(cuda_flooding_test main.cpp)
 
