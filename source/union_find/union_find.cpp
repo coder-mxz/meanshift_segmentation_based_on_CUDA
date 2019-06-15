@@ -1,4 +1,9 @@
-
+/**
+ * @file union_find.cpp
+ * @brief 多线程实现union_find的并行
+ * @author mxz
+ * @date 2019-6-15
+ */
 
 #define HAVE_STRUCT_TIMESPEC
 #include <CImg.h>
@@ -11,10 +16,10 @@
 #include<map>
 #include<iostream>
 #include<time.h>
-#include<union_find.h>
+#include "union_find.h"
 
 
-#define THREAD_NUM 8
+#define THREAD_NUM 8 ///< 线程数目
 const double color_radius = 6.5;
 
 
@@ -29,22 +34,15 @@ using namespace cimg_library;
 void *threadInsert(void *arg);
 
 namespace CuMeanShift {
-    PthreadUnionFind::PthreadUnionFind(int *labels,
-                                       float *mode,
-                                       int *new_labels,
-                                       int *mode_point_count,
-                                       int width,
-                                       int height) {
-        this->labels = labels;
-        this->mode = mode;
-        this->new_labels = new_labels;
-        this->mode_point_count = mode_point_count;
-        this->width = width;
-        this->height = height;
-        setRegionCount();
-    }
 
 
+    /**
+     * @brief 构造函数
+     *
+     * @param img
+     * @param cimg_labels
+     * @return None
+     */
     PthreadUnionFind::PthreadUnionFind(CImg<uint8_t> &img, CImg<int> &cimg_labels) {
         region_count = 0;
         width = img.width();
@@ -66,7 +64,7 @@ namespace CuMeanShift {
                 mode[label * 3 + 1] = img(j, i, 1);
                 mode[label * 3 + 2] = img(j, i, 2);
 
-                // Fill
+                /// Fill
                 std::stack<Point> neigh_stack;
                 neigh_stack.push(Point(i, j));
                 const int dxdy[][2] = {{-1, -1},
@@ -94,11 +92,14 @@ namespace CuMeanShift {
 
             }
         }
-        //current Region count
+        ///current Region count
         region_count = label + 1;
     }
 
-
+    /**
+     * @brief 单线程实现union_find
+     * @return labels会被更新
+     */
     void PthreadUnionFind::unionFindOneThread() {
         int old_region_count = region_count;
         for (int counter = 0, delta_region_count = 1; counter < 5 && delta_region_count > 0; counter++) {
@@ -224,11 +225,12 @@ namespace CuMeanShift {
         }
 
     }
-
+    /**
+     * @brief 多线程实现union_find
+     * @return labels会更新
+     */
     void PthreadUnionFind::unionFindMultiThread() {
-//		ralist_lock = new pthread_rwlock_t[region_count];
-//		pthread_t *thread_pool=new pthread_t[THREAD_NUM];
-//		PthreadData *pthread_data_array = new PthreadData[THREAD_NUM];
+
         for (int counter = 0, delta_region_count = 1; counter < 5 && delta_region_count > 0; counter++) {
             pthread_t *thread_pool = new pthread_t[THREAD_NUM];
             PthreadData *pthread_data_array = new PthreadData[THREAD_NUM];
@@ -268,7 +270,7 @@ namespace CuMeanShift {
                 }
             }
 
-            //boundary analysis
+            ///boundary analysis
             for (int i = 0; i < THREAD_NUM - 1; i++) {
                 int end = (i + 1) * block_size > width * height ? height * width - 1 : (i + 1) * block_size - 1;
                 for (int j = 0; j < width; j++) {
@@ -293,7 +295,7 @@ namespace CuMeanShift {
 
 
 
-            // 2.Treat each region Ri as a disjoint set
+            /// 2.Treat each region Ri as a disjoint set
             for (int i = 0; i < region_count; i++) {
                 RAList *neighbor = ralist[i].next;
                 while (neighbor) {
@@ -304,20 +306,20 @@ namespace CuMeanShift {
                         if (i_can_el < neigh_can_el)
                             ralist[neigh_can_el].label = i_can_el;
                         else {
-                            //ralist[ralist[i_can_el].label].label = i_can_el;
+                            ///ralist[ralist[i_can_el].label].label = i_can_el;
                             ralist[i_can_el].label = neigh_can_el;
                         }
                     }
                     neighbor = neighbor->next;
                 }
             }
-            // 3. Union Find
+            /// 3. Union Find
             for (int i = 0; i < region_count; i++) {
                 int i_can_el = i;
                 while (ralist[i_can_el].label != i_can_el) i_can_el = ralist[i_can_el].label;
                 ralist[i].label = i_can_el;
             }
-            // 4. Traverse joint sets, relabeling image.
+            /// 4. Traverse joint sets, relabeling image.
             int *mode_point_count_buffer = new int[region_count];
             memset(mode_point_count_buffer, 0, region_count * sizeof(int));
             float *mode_buffer = new float[region_count * 3];
@@ -368,31 +370,33 @@ namespace CuMeanShift {
         }
     }
 
-
+    /**
+     * @brief 二维到一维的转换
+     *
+     * @param i，j
+     * @return int
+     * @retval 一维的对应index
+     */
     int PthreadUnionFind::dimTran(int i, int j) {
         return i * width + j;
     }
 
-    void PthreadUnionFind::setRegionCount() {
-//		hash_map<int,bool> hmap;
-        map<int, bool> hmap;
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                if (hmap.find(labels[dimTran(i, j)]) == hmap.end()) {
-                    hmap[labels[dimTran(i, j)]] = true;
-                }
-            }
-        }
-        region_count = hmap.size();
-//		cout<<"region_count:"<<region_count<<endl;
-        return;
-    }
-
+    /**
+     * @brief 计算像素距离
+     *
+     * @param const float *a
+     * @param const float *b
+     * @return distance
+     */
     float PthreadUnionFind::colorDistance(const float *a, const float *b) {
         float l = a[0] - b[0], u = a[1] - b[1], v = a[2] - b[2];
         return l * l + u * u + v * v;
     }
 
+    /**
+     * @brief 获取labels
+     * @return labels
+     */
     int *PthreadUnionFind::getResultLabels() {
         return labels;
     }
@@ -408,14 +412,12 @@ void *threadInsert(void *arg) {
             RAList* ra_node2 = new RAList();
             ra_node1->label = data->labels[i];
             ra_node2->label = data->labels[i - data->width];
-//			pthread_rwlock_wrlock(&ralist_lock[ra_node1->label]);
             int insert_res=(data->ralist)[ra_node1->label].insert(ra_node2);
 
-//			pthread_rwlock_unlock(&ralist_lock[ra_node1->label]);
             if (insert_res != 0) {
-//				pthread_rwlock_wrlock(&ralist_lock[ra_node2->label]);
+
                 (data->ralist)[ra_node2->label].insert(ra_node1);
-//				pthread_rwlock_unlock(&ralist_lock[ra_node2->label]);
+
             }
         }
         if (i%data->width!=0&&i<data->width*data->height&&data->labels[i] != data->labels[i - 1]) {
@@ -423,13 +425,9 @@ void *threadInsert(void *arg) {
             RAList* ra_node2 = new RAList();
             ra_node1->label = data->labels[i];
             ra_node2->label = data->labels[i - 1];
-//			pthread_rwlock_wrlock(&ralist_lock[ra_node1->label]);
             int insert_res=(data->ralist)[ra_node1->label].insert(ra_node2);
-//			pthread_rwlock_unlock(&ralist_lock[ra_node1->label]);
             if (insert_res != 0) {
-//				pthread_rwlock_wrlock(&ralist_lock[ra_node2->label]);
                 (data->ralist)[ra_node2->label].insert(ra_node1);
-//				pthread_rwlock_unlock(&ralist_lock[ra_node2->label]);
             }
         }
     }
@@ -448,48 +446,4 @@ bool outputBin(const char *path, size_t count, int *data) {
     return true;
 }
 
-/**
- * @brief: first argument: input image path,
- *         second argument: output binfile path
- */
-int main(int argc, char **argv) {
-    /// read image
-    if (argc != 3) {
-        cout << "Invalid argument number: " << argc - 1 << ", required is 2" << endl;
-        return 1;
-    }
-    CImg <uint8_t> img(argv[1]), org_img(img);
-    CImg<int> labels(img.width(), img.height(), 1, 1, -1);
-    if (img.is_empty()) {
-        cout << "Failed to read image" << endl;
-        return 1;
-    } else if (img.spectrum() != 3) {
-        cout << "Image should be 3-channels, get " << img.spectrum() << " channels" << endl;
-        return 1;
-    }
 
-
-//        CImgDisplay disp(img, "img", 1);
-//        disp.show();
-//        while (!disp.is_closed()) {
-//            disp.wait();
-//        }
-
-    clock_t start,finish;
-    double totaltime;
-
-    start=clock();
-    PthreadUnionFind puf1(img, labels);
-    puf1.unionFindOneThread();
-    finish=clock();
-    totaltime=(double)(finish-start)/CLOCKS_PER_SEC;
-    cout<<"\n one_thread runtime of file "<<argv[1]<<" is "<<totaltime<<"second"<<endl;
-
-    start=clock();
-    PthreadUnionFind puf2(img, labels);
-    puf2.unionFindMultiThread();
-    finish=clock();
-    totaltime=(double)(finish-start)/CLOCKS_PER_SEC;
-    cout<<"\n multi_thread runtime of file "<<argv[1]<<" is "<<totaltime<<"second"<<endl;
-    outputBin(argv[2],labels.size(),puf2.getResultLabels());
-}

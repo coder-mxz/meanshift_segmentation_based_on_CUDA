@@ -1,6 +1,10 @@
-//
-// Created by mxz on 2019/6/15.
-//
+/**
+ * @file union_find.h
+ * @brief 多线程实现union_find的并行
+ * @author mxz
+ * @date 2019-6-15
+ */
+
 
 #ifndef MEANSHIFT_SEGMENTATION_BASED_ON_CUDA_MASTER_UNION_FIND_H
 #define MEANSHIFT_SEGMENTATION_BASED_ON_CUDA_MASTER_UNION_FIND_H
@@ -57,7 +61,7 @@ namespace CuMeanShift {
 
     RAList::RAList(void) {
         label = -1;
-        next = 0;    //NULL
+        next = 0;    ///NULL
     }
 
     RAList::~RAList(void) {}
