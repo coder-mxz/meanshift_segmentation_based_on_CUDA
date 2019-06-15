@@ -7,7 +7,7 @@
 
 template<int blk_w, int blk_h, int dis_range = 5, int max_iter = 5,
         typename std::enable_if<(((blk_w + 2 * dis_range) * (blk_h + 2 * dis_range) * 3 <= 12288)), int>::type = 0>
-__global__ void _ms_filter_luv(cudaTextureObject_t in_tex,
+__global__ void _msFilterLUV(cudaTextureObject_t in_tex,
                            float *output,
                            int width,
                            int height,
@@ -136,7 +136,7 @@ __global__ void _ms_filter_luv(cudaTextureObject_t in_tex,
 
 namespace CuMeanShift {
     template<int blk_w, int blk_h, int ch>
-    void CudaMsFilter<blk_w, blk_h, ch>::ms_filter_luv(float *input,
+    void CudaMsFilter<blk_w, blk_h, ch>::msFilterLUV(float *input,
                                                        float *output,
                                                        int width,
                                                        int height,
@@ -168,67 +168,67 @@ namespace CuMeanShift {
         cudaCreateTextureObject(&in_tex, &res_desc, &tex_desc, NULL);
         switch (dis_range) {
             case 1:
-                _ms_filter_luv<blk_w, blk_h, 1, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 1, 5> << < grid, block >> >
                                                                (in_tex, output, width, height, pitch, color_range);
                 break;
             case 2:
-                _ms_filter_luv<blk_w, blk_h, 2, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 2, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 3:
-                _ms_filter_luv<blk_w, blk_h, 3, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 3, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 4:
-                _ms_filter_luv<blk_w, blk_h, 4, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 4, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 5:
-                _ms_filter_luv<blk_w, blk_h, 5, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 5, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 6:
-                _ms_filter_luv<blk_w, blk_h, 6, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 6, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 7:
-                _ms_filter_luv<blk_w, blk_h, 7, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 7, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 8:
-                _ms_filter_luv<blk_w, blk_h, 8, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 8, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 9:
-                _ms_filter_luv<blk_w, blk_h, 9, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 9, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 10:
-                _ms_filter_luv<blk_w, blk_h, 10, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 10, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 11:
-                _ms_filter_luv<blk_w, blk_h, 11, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 11, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 12:
-                _ms_filter_luv<blk_w, blk_h, 12, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 12, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 13:
-                _ms_filter_luv<blk_w, blk_h, 13, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 13, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 14:
-                _ms_filter_luv<blk_w, blk_h, 14, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 14, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 15:
-                _ms_filter_luv<blk_w, blk_h, 15, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 15, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             case 16:
-                _ms_filter_luv<blk_w, blk_h, 16, 5> << < grid, block >> >
+                _msFilterLUV<blk_w, blk_h, 16, 5> << < grid, block >> >
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             default:

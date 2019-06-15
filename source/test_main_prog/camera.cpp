@@ -78,9 +78,9 @@ int main(int argc, char **argv) {
 
         cudaMemcpy2D(image_dev_1, pitch, img.data(), 640 * sizeof(float), 640 * sizeof(float), 480 * 3,
                 cudaMemcpyHostToDevice);
-        ms.ms_filter_luv(image_dev_1, image_dev_2, 640, 480, pitch, spatial_radius, color_radius);
-        uf.union_find(nullptr, image_dev_2, labels_dev, &label_count, pitch, 640, 480, color_radius_uf);
-        cl.color_labels(labels_dev, image_dev_3, label_count, pitch, 640, 480);
+        ms.msFilterLUV(image_dev_1, image_dev_2, 640, 480, pitch, spatial_radius, color_radius);
+        uf.unionFind(nullptr, image_dev_2, labels_dev, &label_count, pitch, 640, 480, color_radius_uf);
+        cl.colorLabels(labels_dev, image_dev_3, label_count, pitch, 640, 480);
         cudaMemcpy2D(image_host_ms, 640 * sizeof(float), image_dev_2, pitch, 640 * sizeof(float), 480 * 3,
                      cudaMemcpyDeviceToHost);
         cudaMemcpy2D(image_host_res, 640 * sizeof(float), image_dev_3, pitch, 640 * sizeof(float), 480 * 3,

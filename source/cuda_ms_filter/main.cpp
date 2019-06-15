@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
             img.height() * img.spectrum(),
             cudaMemcpyHostToDevice);
     CudaMsFilter<32, 32, 3> ms;
-    ms.ms_filter_luv(cuda_input, cuda_output, img.width(), img.height(), pitch, spatial_radius, color_radius);
+    ms.msFilterLUV(cuda_input, cuda_output, img.width(), img.height(), pitch, spatial_radius, color_radius);
     cudaMemcpy2D(output,
             img.width() * sizeof(float),
             cuda_output,

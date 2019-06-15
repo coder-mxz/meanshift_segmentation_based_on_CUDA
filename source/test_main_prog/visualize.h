@@ -15,7 +15,7 @@ namespace CuMeanShift {
     template <int blk_width=32, int blk_height=32>
     class CudaColorLabels {
     public:
-        void color_labels(int *labels,
+        void colorLabels(int *labels,
                           float *image,
                           int label_count,
                           int pitch,

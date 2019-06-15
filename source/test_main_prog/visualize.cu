@@ -1,6 +1,6 @@
 #include "visualize.h"
 #include <utils.h>
-__global__ void _color_labels(int *labels,
+__global__ void _colorLabels(int *labels,
                               float *image,
                               int label_count,
                               int pitch,
@@ -25,7 +25,7 @@ __global__ void _color_labels(int *labels,
 
 namespace CuMeanShift {
     template <int blk_w, int blk_h>
-    void CudaColorLabels<blk_w, blk_h>::color_labels(int *labels,
+    void CudaColorLabels<blk_w, blk_h>::colorLabels(int *labels,
                           float *image,
                           int label_count,
                           int pitch,
@@ -33,7 +33,7 @@ namespace CuMeanShift {
                           int height) {
         dim3 block_1(blk_w, blk_h);
         dim3 grid_1(CEIL(width, blk_w), CEIL(height, blk_h));
-        _color_labels<<<grid_1, block_1>>>(labels, image, label_count, pitch, width, height);
+        _colorLabels<<<grid_1, block_1>>>(labels, image, label_count, pitch, width, height);
         cudaDeviceSynchronize();
     }
 }

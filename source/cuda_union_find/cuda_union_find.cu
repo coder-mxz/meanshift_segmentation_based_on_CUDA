@@ -6,7 +6,7 @@
 #include <cuda_union_find/cuda_union_find.h>
 #include <driver_types.h>
 
-__device__ void _union_find(int *labels, int idx_1, int idx_2) {
+__device__ void _unionFind(int *labels, int idx_1, int idx_2) {
     while(1) {
         idx_1 = labels[idx_1];
         idx_2 = labels[idx_2];
@@ -20,7 +20,7 @@ __device__ void _union_find(int *labels, int idx_1, int idx_2) {
 }
 
 template <int blk_w, int blk_h, int ch, bool ignore_labels=false>
-__global__ void _local_union_find(cudaTextureObject_t in_tex, int *labels, int width, int height, float range) {
+__global__ void _localUnionFind(cudaTextureObject_t in_tex, int *labels, int width, int height, float range) {
     __shared__ int blk_labels[blk_w * blk_h];
     __shared__ int blk_org_labels[blk_w * blk_h];
     __shared__ float blk_pixels[blk_w * blk_h * ch];
@@ -93,7 +93,7 @@ __global__ void _local_union_find(cudaTextureObject_t in_tex, int *labels, int w
             diff_sum += diff * diff;
         }
         if (diff_sum < range)
-            _union_find(blk_labels, tid, tid - 1);
+            _unionFind(blk_labels, tid, tid - 1);
     }
     __syncthreads();
 
@@ -104,7 +104,7 @@ __global__ void _local_union_find(cudaTextureObject_t in_tex, int *labels, int w
             diff_sum += diff * diff;
         }
         if (diff_sum < range)
-            _union_find(blk_labels, tid, tid - blk_w);
+            _unionFind(blk_labels, tid, tid - blk_w);
     }
     __syncthreads();
 
@@ -113,7 +113,7 @@ __global__ void _local_union_find(cudaTextureObject_t in_tex, int *labels, int w
 }
 
 template <int blk_w, int blk_h, int ch>
-__global__ void _boundary_analysis_h(cudaTextureObject_t in_tex, int *labels, int width, int height, float range) {
+__global__ void _boundaryAnalysisH(cudaTextureObject_t in_tex, int *labels, int width, int height, float range) {
     int blk_x_idx = blockIdx.x * blockDim.x;
     int blk_y_idx = blockIdx.y * blockDim.y;
     int col = blk_x_idx + threadIdx.x;
@@ -129,12 +129,12 @@ __global__ void _boundary_analysis_h(cudaTextureObject_t in_tex, int *labels, in
         diff_sum += diff * diff;
     }
     if (diff_sum < range) {
-        _union_find(labels, gid, gid - width);
+        _unionFind(labels, gid, gid - width);
     }
 }
 
 template <int blk_w, int blk_h, int ch>
-__global__ void _boundary_analysis_v(cudaTextureObject_t in_tex, int *labels, int width, int height, float range) {
+__global__ void _boundaryAnalysisV(cudaTextureObject_t in_tex, int *labels, int width, int height, float range) {
     int blk_x_idx = blockIdx.x * blockDim.x;
     int blk_y_idx = blockIdx.y * blockDim.y;
     int col = (blk_x_idx + threadIdx.x + 1) * blk_w;
@@ -150,11 +150,11 @@ __global__ void _boundary_analysis_v(cudaTextureObject_t in_tex, int *labels, in
         diff_sum += diff * diff;
     }
     if (diff_sum < range) {
-        _union_find(labels, gid, gid - 1);
+        _unionFind(labels, gid, gid - 1);
     }
 }
 
-__global__ void _global_path_compression(int *labels, int width, int height) {
+__global__ void _globalPathCompression(int *labels, int width, int height) {
     int blk_x_idx = blockIdx.x * blockDim.x;
     int blk_y_idx = blockIdx.y * blockDim.y;
     int col = blk_x_idx + threadIdx.x;
@@ -177,14 +177,14 @@ __global__ void _global_path_compression(int *labels, int width, int height) {
     labels[gid] = label;
 }
 
-__global__ void _label_gen_map(int *labels, int *map, int count) {
+__global__ void _labelGenMap(int *labels, int *map, int count) {
     int gid = blockIdx.x * blockDim.x + threadIdx.x;
     if (gid < count) {
         map[labels[gid]] = 1;
     }
 }
 
-__global__ void _label_gen_idx(int *map, int *counter, int count) {
+__global__ void _labelGenIndex(int *map, int *counter, int count) {
     int gid = blockIdx.x * blockDim.x + threadIdx.x;
     if (gid < count) {
         if (map[gid] > 0)
@@ -194,7 +194,7 @@ __global__ void _label_gen_idx(int *map, int *counter, int count) {
     }
 }
 
-__global__ void _label_remap(int *labels, int *map, int count) {
+__global__ void _labelRemap(int *labels, int *map, int count) {
     int gid = blockIdx.x * blockDim.x + threadIdx.x;
     if (gid < count) {
         labels[gid] = map[labels[gid]];
@@ -203,7 +203,7 @@ __global__ void _label_remap(int *labels, int *map, int count) {
 
 namespace CuMeanShift {
     template <int blk_w, int blk_h, int ch, bool ign>
-    void CudaUnionFind<blk_w, blk_h, ch, ign>::union_find(int *labels,
+    void CudaUnionFind<blk_w, blk_h, ch, ign>::unionFind(int *labels,
                                                           float *input,
                                                           int *new_labels,
                                                           int *label_count,
@@ -243,14 +243,14 @@ namespace CuMeanShift {
             cudaMemcpy(new_labels, labels, width * height * sizeof(int), cudaMemcpyDeviceToDevice);
         cudaMalloc(&labels_map, width * height * sizeof(int));
 
-        _local_union_find<blk_w, blk_h, ch, ign><<<grid_1, block_1>>>(in_tex, new_labels, width, height, range);
+        _localUnionFind<blk_w, blk_h, ch, ign><<<grid_1, block_1>>>(in_tex, new_labels, width, height, range);
 
         if (height > blk_h)
-            _boundary_analysis_h<blk_w, blk_h, ch><<<grid_2, block_1>>>(in_tex, new_labels, width, height, range);
+            _boundaryAnalysisH<blk_w, blk_h, ch><<<grid_2, block_1>>>(in_tex, new_labels, width, height, range);
         if (width > blk_w)
-            _boundary_analysis_v<blk_w, blk_h, ch><<<grid_3, block_1>>>(in_tex, new_labels, width, height, range);
+            _boundaryAnalysisV<blk_w, blk_h, ch><<<grid_3, block_1>>>(in_tex, new_labels, width, height, range);
 
-        _global_path_compression<<<grid_1, block_1>>>(new_labels, width, height);
+        _globalPathCompression<<<grid_1, block_1>>>(new_labels, width, height);
 
         cudaDeviceSynchronize();
         /// count labels & remap labels
@@ -260,9 +260,9 @@ namespace CuMeanShift {
 
         cudaMalloc(&counter_dev, sizeof(int));
         cudaMemset(counter_dev, 0, sizeof(int));
-        _label_gen_map<<<grid_map, block_map>>>(new_labels, labels_map, width * height);
-        _label_gen_idx<<<grid_map, block_map>>>(labels_map, counter_dev, width * height);
-        _label_remap<<<grid_map, block_map>>>(new_labels, labels_map, width * height);
+        _labelGenMap<<<grid_map, block_map>>>(new_labels, labels_map, width * height);
+        _labelGenIndex<<<grid_map, block_map>>>(labels_map, counter_dev, width * height);
+        _labelRemap<<<grid_map, block_map>>>(new_labels, labels_map, width * height);
         cudaMemcpy(label_count, counter_dev, sizeof(int), cudaMemcpyDeviceToHost);
         cudaFree(counter_dev);
 
