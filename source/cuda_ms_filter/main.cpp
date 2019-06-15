@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
             img.height() * img.spectrum(),
             cudaMemcpyHostToDevice);
     CudaMsFilter<32, 32, 3> ms;
-    ms.ms_filter_luv(cuda_input, cuda_output, img.width(), img.height(), pitch, spatial_radius, color_radius, 5);
+    ms.ms_filter_luv(cuda_input, cuda_output, img.width(), img.height(), pitch, spatial_radius, color_radius);
     cudaMemcpy2D(output,
             img.width() * sizeof(float),
             cuda_output,
@@ -80,21 +80,18 @@ int main(int argc, char *argv[]) {
             img.width() * sizeof(float),
             img.height() * img.spectrum(),
             cudaMemcpyDeviceToHost);
+
     CImg<float> filtered_img(output, img.width(), img.height(), 1, 3);
     CImgDisplay disp(filtered_img, "filtered", 2);
     disp.show();
     while (!disp.is_closed()) {
         disp.wait();
     }
-//    for (int i = 0; i < min(img.height(), 10); ++i) {
-//        for (int j = 0; j < min(img.with(), 10); ++j) {
-//            printf("%f %f %f\n", img(j, i, 0), img(j, i, 1), img(j, i, 2));
-//        }
-//    }
-//    if (!outputBin(argv[2], img.size(), output)) {
-//        cout << "Failed to output bin file" << endl;
-//        return 1;
-//    }
+
+    if (!outputBin(argv[2], filtered_img.size(), output)) {
+        cout << "Failed to output bin file" << endl;
+        return 1;
+    }
     cudaFree(cuda_input);
     cudaFree(cuda_output);
     free(output);
