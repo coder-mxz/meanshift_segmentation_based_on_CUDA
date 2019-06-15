@@ -179,49 +179,49 @@ namespace CuMeanShift {
                 _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
                 break;
             case 2:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<2><<<grid2, block2>>> (prop_id, size);
                 break;
             case 3:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<3><<<grid2, block2>>> (prop_id, size);
                 break;
             case 4:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<4><<<grid2, block2>>> (prop_id, size);
                 break;
             case 5:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<5><<<grid2, block2>>> (prop_id, size);
                 break;
             case 6:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<6><<<grid2, block2>>> (prop_id, size);
                 break;
             case 7:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<7><<<grid2, block2>>> (prop_id, size);
                 break;
             case 8:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<8><<<grid2, block2>>> (prop_id, size);
                 break;
             case 9:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<9><<<grid2, block2>>> (prop_id, size);
                 break;
             case 10:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<10><<<grid2, block2>>> (prop_id, size);
                 break;
             case 11:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<11><<<grid2, block2>>> (prop_id, size);
                 break;
             case 12:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<12><<<grid2, block2>>> (prop_id, size);
                 break;
             case 13:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<13><<<grid2, block2>>> (prop_id, size);
                 break;
             case 14:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<14><<<grid2, block2>>> (prop_id, size);
                 break;
             case 15:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<15><<<grid2, block2>>> (prop_id, size);
                 break;
             case 16:
-                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                _propagateLabels<16><<<grid2, block2>>> (prop_id, size);
                 break;
         }
 
