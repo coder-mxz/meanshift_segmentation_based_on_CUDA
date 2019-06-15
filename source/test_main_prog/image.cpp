@@ -39,15 +39,15 @@ int main(int argc, char **argv) {
     float *image_dev_1, *image_dev_2, *image_dev_3;
     int *labels_dev, *labels_dev2;
     size_t pitch;
-    float *image_host_ms = new float[640 * 480 * 3];
-    float *image_host_res = new float[640 * 480 * 3];
-    int *labels_host = new int[640 * 480];
+    float *image_host_ms = new float[img.width() * img.height() * 3];
+    float *image_host_res = new float[img.width() * img.height() * 3];
+    int *labels_host = new int[img.width() * img.height()];
     int label_count;
-    cudaMallocPitch(&image_dev_1, &pitch, 640 * sizeof(float), 480 * 3);
-    cudaMallocPitch(&image_dev_2, &pitch, 640 * sizeof(float), 480 * 3);
-    cudaMallocPitch(&image_dev_3, &pitch, 640 * sizeof(float), 480 * 3);
-    cudaMalloc(&labels_dev, 640 * 480 * sizeof(int));
-    cudaMalloc(&labels_dev2, 640 * 480 * sizeof(int));
+    cudaMallocPitch(&image_dev_1, &pitch, img.width() * sizeof(float), img.height() * 3);
+    cudaMallocPitch(&image_dev_2, &pitch, img.width() * sizeof(float), img.height() * 3);
+    cudaMallocPitch(&image_dev_3, &pitch, img.width() * sizeof(float), img.height() * 3);
+    cudaMalloc(&labels_dev, img.width() * img.height() * sizeof(int));
+    cudaMalloc(&labels_dev2, img.width() * img.height() * sizeof(int));
     /// begin capture and calculation
     display.show();
 
@@ -57,20 +57,20 @@ int main(int argc, char **argv) {
 
     cudaEventRecord(begin);
 
-    cudaMemcpy2D(image_dev_1, pitch, img.data(), 640 * sizeof(float), 640 * sizeof(float), 480 * 3,
+    cudaMemcpy2D(image_dev_1, pitch, img.data(), img.width() * sizeof(float), img.width() * sizeof(float), img.height() * 3,
                  cudaMemcpyHostToDevice);
-    ms.msFilterLUV(image_dev_1, image_dev_2, 640, 480, pitch, spatial_radius, color_radius);
-    f.flooding(labels_dev2, image_dev_2, pitch, 640, 480, 6, color_radius_uf);
-    uf.unionFind(labels_dev2, image_dev_2, labels_dev, &label_count, pitch, 640, 480, color_radius_uf);
-    cl.colorLabels(labels_dev, image_dev_3, label_count, pitch, 640, 480);
-    cudaMemcpy2D(image_host_ms, 640 * sizeof(float), image_dev_2, pitch, 640 * sizeof(float), 480 * 3,
+    ms.msFilterLUV(image_dev_1, image_dev_2, img.width(), img.height(), pitch, spatial_radius, color_radius);
+    f.flooding(labels_dev2, image_dev_2, pitch, img.width(), img.height(), 6, color_radius_uf);
+    uf.unionFind(labels_dev2, image_dev_2, labels_dev, &label_count, pitch, img.width(), img.height(), color_radius_uf);
+    cl.colorLabels(labels_dev, image_dev_3, label_count, pitch, img.width(), img.height());
+    cudaMemcpy2D(image_host_ms, img.width() * sizeof(float), image_dev_2, pitch, img.width() * sizeof(float), img.height() * 3,
                  cudaMemcpyDeviceToHost);
-    cudaMemcpy2D(image_host_res, 640 * sizeof(float), image_dev_3, pitch, 640 * sizeof(float), 480 * 3,
+    cudaMemcpy2D(image_host_res, img.width() * sizeof(float), image_dev_3, pitch, img.width() * sizeof(float), img.height() * 3,
                  cudaMemcpyDeviceToHost);
-    cudaMemcpy(labels_host, labels_dev, 640 * 480 * sizeof(int), cudaMemcpyDeviceToHost);
-    img_ms.assign(image_host_ms, 640, 480, 1, 3, true);
-    img_res.assign(image_host_res, 640, 480, 1, 3, true);
-    img_labels.assign(labels_host, 640, 480, 1, 1, true);
+    cudaMemcpy(labels_host, labels_dev, img.width() * img.height() * sizeof(int), cudaMemcpyDeviceToHost);
+    img_ms.assign(image_host_ms, img.width(), img.height(), 1, 3, true);
+    img_res.assign(image_host_res, img.width(), img.height(), 1, 3, true);
+    img_labels.assign(labels_host, img.width(), img.height(), 1, 1, true);
 
     cudaEventRecord(end);
     cudaEventSynchronize(end);
@@ -88,7 +88,6 @@ int main(int argc, char **argv) {
     }
 
 
-    // Release camera
     cudaFree(image_dev_1);
     cudaFree(image_dev_2);
     cudaFree(image_dev_3);
