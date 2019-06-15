@@ -8,6 +8,7 @@
 #include <spdlog/logger.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <cuda_ms_filter/cuda_ms_filter.h>
+#include <cuda_flooding/cuda_flooding.h>
 #include <cuda_union_find/cuda_union_find.h>
 #include "visualize.h"
 
@@ -21,6 +22,7 @@ int main(int argc, char **argv) {
     CImg<int> img_labels;
     CImgDisplay display, display2, display3, display4;
     CudaMsFilter<32, 32, 3> ms;
+    CudaFlooding<32, 32, 3, 4> f;
     CudaUnionFind<32, 32, 3, true> uf;
     CudaColorLabels<32, 32> cl;
 
@@ -35,7 +37,7 @@ int main(int argc, char **argv) {
 
     /// initialize memory buffers
     float *image_dev_1, *image_dev_2, *image_dev_3;
-    int *labels_dev;
+    int *labels_dev, *labels_dev2;
     size_t pitch;
     float *image_host_ms = new float[640 * 480 * 3];
     float *image_host_res = new float[640 * 480 * 3];
@@ -45,7 +47,7 @@ int main(int argc, char **argv) {
     cudaMallocPitch(&image_dev_2, &pitch, 640 * sizeof(float), 480 * 3);
     cudaMallocPitch(&image_dev_3, &pitch, 640 * sizeof(float), 480 * 3);
     cudaMalloc(&labels_dev, 640 * 480 * sizeof(int));
-
+    cudaMalloc(&labels_dev2, 640 * 480 * sizeof(int));
     /// begin capture and calculation
     display.show();
 
@@ -58,7 +60,8 @@ int main(int argc, char **argv) {
     cudaMemcpy2D(image_dev_1, pitch, img.data(), 640 * sizeof(float), 640 * sizeof(float), 480 * 3,
                  cudaMemcpyHostToDevice);
     ms.msFilterLUV(image_dev_1, image_dev_2, 640, 480, pitch, spatial_radius, color_radius);
-    uf.unionFind(nullptr, image_dev_2, labels_dev, &label_count, pitch, 640, 480, color_radius_uf);
+    f.flooding(labels_dev2, image_dev_2, pitch, 640, 480, 6, color_radius_uf);
+    uf.unionFind(labels_dev2, image_dev_2, labels_dev, &label_count, pitch, 640, 480, color_radius_uf);
     cl.colorLabels(labels_dev, image_dev_3, label_count, pitch, 640, 480);
     cudaMemcpy2D(image_host_ms, 640 * sizeof(float), image_dev_2, pitch, 640 * sizeof(float), 480 * 3,
                  cudaMemcpyDeviceToHost);
@@ -89,6 +92,9 @@ int main(int argc, char **argv) {
     cudaFree(image_dev_1);
     cudaFree(image_dev_2);
     cudaFree(image_dev_3);
+
+    cudaFree(labels_dev);
+    cudaFree(labels_dev2);
 
     delete [] image_host_ms;
     delete [] image_host_res;
