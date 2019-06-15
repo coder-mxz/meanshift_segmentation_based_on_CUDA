@@ -5,7 +5,8 @@ cmake_minimum_required(VERSION 3.9)
 ################################################################
 project(cuda_meanshift_seg LANGUAGES C CXX CUDA)
 find_package(CUDA REQUIRED)
-find_package(OpenCV REQUIRED)
+#find_package(OpenCV REQUIRED)
+#set(CMAKE_BUILD_TYPE Release)
 
 if(CUDA_FOUND)
     message("CUDA found")
