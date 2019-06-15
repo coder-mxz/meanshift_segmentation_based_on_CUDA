@@ -11,36 +11,29 @@
 #include <driver_types.h>
 #endif
 
-__global__ void _initLabels(int *labels, int width, int height) {
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    int gid = row * width + col;
-
-    if (row >= height || col >= width)
+__global__ void _initLabels(int *labels, int size) {
+    int gid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (gid >= size)
         return;
 
     labels[gid] = gid;
 }
 
-__global__ void _propagateLabels(int *prop_id, int width, int height) {
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    int gid = row * width + col;
-
+template <int loop=8>
+__global__ void _propagateLabels(int *prop_id, int size) {
+    int gid = blockIdx.x * blockDim.x + threadIdx.x;
     // flood and propagate labels
-
-    if (row >= height || col >= width)
+    if (gid >= size)
         return;
 
-    prop_id[gid] = prop_id[prop_id[gid]];
+    for(int i=0; i<loop; i++) {
+        prop_id[gid] = prop_id[prop_id[gid]];
+    }
 }
 
-__global__ void _setLabels(int *labels, int *prop_id, int width, int height) {
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    int gid = row * width + col;
-
-    if (row >= height || col >= width)
+__global__ void _setLabels(int *labels, int *prop_id, int size) {
+    int gid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (gid >= size)
         return;
 
     labels[gid] = labels[prop_id[gid]];
@@ -152,7 +145,8 @@ namespace CuMeanShift {
 
         dim3 block(blk_w, blk_h);
         dim3 grid(CEIL(width, blk_w), CEIL(height, blk_h));
-
+        dim3 block2(blk_w * blk_h, 1);
+        dim3 grid2(CEIL(width * height, blk_w * blk_h), 1);
         /// create texture object
         cudaResourceDesc res_desc;
         memset(&res_desc, 0, sizeof(res_desc));
@@ -175,14 +169,64 @@ namespace CuMeanShift {
         cudaCreateTextureObject(&in_tex, &res_desc, &tex_desc, NULL);
 
         int *prop_id;
+        int size = width * height;
         cudaMalloc(&prop_id, width * height * sizeof(int));
-        _initLabels <<<grid, block>>> (labels, width, height);
+        _initLabels <<<grid2, block2>>> (labels, size);
         _sharedFlooding<blk_w, blk_h, ch, rad> <<< grid, block >>> (in_tex, labels, prop_id,
                 width, height, color_range / loops);
-        for (int i = 0; i < loops; i++) {
-            _propagateLabels<<<grid, block>>> (prop_id, width, height);
+        switch (loops) {
+            case 1:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 2:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 3:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 4:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 5:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 6:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 7:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 8:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 9:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 10:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 11:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 12:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 13:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 14:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 15:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
+            case 16:
+                _propagateLabels<1><<<grid2, block2>>> (prop_id, size);
+                break;
         }
-        _setLabels<<<grid, block>>> (labels, prop_id, width, height);
+
+
+        _setLabels<<<grid2, block2>>> (labels, prop_id, size);
         cudaDeviceSynchronize();
         cudaDestroyTextureObject(in_tex);
         cudaFree(prop_id);
