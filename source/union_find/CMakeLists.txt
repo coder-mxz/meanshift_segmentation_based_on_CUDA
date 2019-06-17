@@ -3,7 +3,7 @@ set(CMAKE_CXX_STANDARD 14)
 ################################################################
 # Configuration for pth_union_find
 ################################################################
-add_library(union_find SHARED union_find.cpp union_find.h)
+add_library(union_find SHARED union_find.cpp)
 
 ################################################################
 # Configuration for pth_union_find_test

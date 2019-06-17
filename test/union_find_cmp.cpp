@@ -52,6 +52,7 @@ int main(int argc, char **argv) {
         label_map[ref[i]][test[i]]++;
     }
 
+    /// calculate region overlap ratio
     for(auto iter = label_map.begin(); iter != label_map.end(); iter++) {
         size_t total = 0, diff_count = 0;
         int max = 0;

@@ -6,6 +6,12 @@
 #include <cuda_union_find/cuda_union_find.h>
 #include <driver_types.h>
 
+/**
+ * @brief UnionFind function
+ * @param labels: labels array, on shared meory or global memory
+ * @param idx_1: index 1
+ * @param idx_2: index 2
+ */
 __device__ void _unionFind(int *labels, int idx_1, int idx_2) {
     while(1) {
         idx_1 = labels[idx_1];
@@ -19,6 +25,18 @@ __device__ void _unionFind(int *labels, int idx_1, int idx_2) {
     }
 }
 
+/**
+ * @brief Local UnionFind function
+ * @tparam blk_w: block width
+ * @tparam blk_h: block height
+ * @tparam ch: channels
+ * @tparam ignore_labels: whether ignore input labels or not
+ * @param in_tex: input image/vector matrix
+ * @param labels: input labels
+ * @param width: input image width
+ * @param height: input image height
+ * @param range: maximum join threshold of || pixel1 - pixel2 ||
+ */
 template <int blk_w, int blk_h, int ch, bool ignore_labels=false>
 __global__ void _localUnionFind(cudaTextureObject_t in_tex, int *labels, int width, int height, float range) {
     __shared__ int blk_labels[blk_w * blk_h];
@@ -112,6 +130,17 @@ __global__ void _localUnionFind(cudaTextureObject_t in_tex, int *labels, int wid
     labels[gid] = blk_org_labels[blk_labels[tid]];
 }
 
+/**
+ * @brief horizontal boundary analysis
+ * @tparam blk_w: block width
+ * @tparam blk_h: block height
+ * @tparam ch: channels
+ * @param in_tex: input image/vector matrix
+ * @param labels: input labels
+ * @param width: input image width
+ * @param height: input image height
+ * @param range: maximum join threshold of || pixel1 - pixel2 ||
+ */
 template <int blk_w, int blk_h, int ch>
 __global__ void _boundaryAnalysisH(cudaTextureObject_t in_tex, int *labels, int width, int height, float range) {
     int blk_x_idx = blockIdx.x * blockDim.x;
@@ -133,6 +162,17 @@ __global__ void _boundaryAnalysisH(cudaTextureObject_t in_tex, int *labels, int 
     }
 }
 
+/**
+ * @brief vertical boundary analysis
+ * @tparam blk_w: block width
+ * @tparam blk_h: block height
+ * @tparam ch: channels
+ * @param in_tex: input image/vector matrix
+ * @param labels: input labels
+ * @param width: input image width
+ * @param height: input image height
+ * @param range: maximum join threshold of || pixel1 - pixel2 ||
+ */
 template <int blk_w, int blk_h, int ch>
 __global__ void _boundaryAnalysisV(cudaTextureObject_t in_tex, int *labels, int width, int height, float range) {
     int blk_x_idx = blockIdx.x * blockDim.x;
@@ -154,6 +194,12 @@ __global__ void _boundaryAnalysisV(cudaTextureObject_t in_tex, int *labels, int 
     }
 }
 
+/**
+ * @brief global path compression
+ * @param labels: input labels
+ * @param width: input image width(labels width)
+ * @param height: input image height(labels height)
+ */
 __global__ void _globalPathCompression(int *labels, int width, int height) {
     int blk_x_idx = blockIdx.x * blockDim.x;
     int blk_y_idx = blockIdx.y * blockDim.y;
@@ -177,6 +223,12 @@ __global__ void _globalPathCompression(int *labels, int width, int height) {
     labels[gid] = label;
 }
 
+/**
+ * @brief generate label map from labels
+ * @param labels: input labels
+ * @param map: empty map array, all elemets must be set to 0
+ * @param count: size of labels array
+ */
 __global__ void _labelGenMap(int *labels, int *map, int count) {
     int gid = blockIdx.x * blockDim.x + threadIdx.x;
     if (gid < count) {
@@ -184,6 +236,13 @@ __global__ void _labelGenMap(int *labels, int *map, int count) {
     }
 }
 
+/**
+ * @brief generate label index from label map, index is from 1 to n,
+ *        n is the number of total different labels.
+ * @param map: input map
+ * @param counter: global counter
+ * @param count: size of labels array
+ */
 __global__ void _labelGenIndex(int *map, int *counter, int count) {
     int gid = blockIdx.x * blockDim.x + threadIdx.x;
     if (gid < count) {
@@ -194,6 +253,12 @@ __global__ void _labelGenIndex(int *map, int *counter, int count) {
     }
 }
 
+/**
+ * @brief remap labels
+ * @param labels: input labels
+ * @param map: input map
+ * @param count: size of labels array
+ */
 __global__ void _labelRemap(int *labels, int *map, int count) {
     int gid = blockIdx.x * blockDim.x + threadIdx.x;
     if (gid < count) {
@@ -241,8 +306,6 @@ namespace CuMeanShift {
 
         if (!ign)
             cudaMemcpy(new_labels, labels, width * height * sizeof(int), cudaMemcpyDeviceToDevice);
-        cudaMalloc(&labels_map, width * height * sizeof(int));
-
         _localUnionFind<blk_w, blk_h, ch, ign><<<grid_1, block_1>>>(in_tex, new_labels, width, height, range);
 
         if (height > blk_h)
@@ -260,14 +323,19 @@ namespace CuMeanShift {
 
         cudaMalloc(&counter_dev, sizeof(int));
         cudaMemset(counter_dev, 0, sizeof(int));
+        cudaMalloc(&labels_map, width * height * sizeof(int));
+        cudaMemset(labels_map, 0, width * height * sizeof(int))
+
         _labelGenMap<<<grid_map, block_map>>>(new_labels, labels_map, width * height);
         _labelGenIndex<<<grid_map, block_map>>>(labels_map, counter_dev, width * height);
         _labelRemap<<<grid_map, block_map>>>(new_labels, labels_map, width * height);
+
         cudaMemcpy(label_count, counter_dev, sizeof(int), cudaMemcpyDeviceToHost);
-        cudaFree(counter_dev);
+
 
         cudaDeviceSynchronize();
         cudaDestroyTextureObject(in_tex);
+        cudaFree(counter_dev);
         cudaFree(labels_map);
     }
 }

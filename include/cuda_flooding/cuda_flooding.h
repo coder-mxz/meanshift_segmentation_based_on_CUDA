@@ -1,3 +1,9 @@
+/**
+ * @file cuda_flooding.h
+ * @author wby and iffi
+ * @date 2019-6-15
+ */
+
 #include <cuda_device_runtime_api.h>
 #include <cuda_runtime.h>
 
@@ -10,7 +16,7 @@ namespace CuMeanShift {
     class CudaFlooding {
     public:
         /**
-         * @fn flooding
+         * @fn flooding algorithm
          * @brief flooding algorithm
          * @param labels: Labels array on device memory
          * @param input: Input image on device memory, aligned by pitch

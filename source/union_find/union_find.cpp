@@ -16,7 +16,7 @@
 #include<map>
 #include<iostream>
 #include<time.h>
-#include "union_find.h"
+#include <union_find/union_find.h>
 
 
 #define THREAD_NUM 8 ///< 线程数目

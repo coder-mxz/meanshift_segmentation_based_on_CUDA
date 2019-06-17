@@ -5,6 +5,19 @@
 #include <cuda_ms_filter/cuda_ms_filter.h>
 #include <driver_types.h>
 
+/**
+ *
+ * @tparam blk_w: block width
+ * @tparam blk_h: block height
+ * @tparam dis_range: scan range
+ * @tparam max_iter: maximum iteration times
+ * @param in_tex: input image
+ * @param output: output image
+ * @param width: input image width
+ * @param height: input image height
+ * @param pitch: input image row pitch
+ * @param color_range: maximum include threshold of || pixel1 - pixel2 ||
+ */
 template<int blk_w, int blk_h, int dis_range = 5, int max_iter = 5,
         typename std::enable_if<(((blk_w + 2 * dis_range) * (blk_h + 2 * dis_range) * 3 <= 12288)), int>::type = 0>
 __global__ void _msFilterLUV(cudaTextureObject_t in_tex,
@@ -232,6 +245,8 @@ namespace CuMeanShift {
                                                               (in_tex, output, width, height, pitch, color_range);
                 break;
             default:
+                _msFilterLUV<blk_w, blk_h, 16, 5> << < grid, block >> >
+                                                             (in_tex, output, width, height, pitch, color_range);
                 break;
         }
 
