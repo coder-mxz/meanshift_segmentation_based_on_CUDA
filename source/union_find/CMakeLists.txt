@@ -1,8 +1,12 @@
-cmake_minimum_required(VERSION 3.14)
-set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_STANDARD 14)
-add_library(union_find SHARED union_find.cpp union_find.h main.cpp)
-include_directories(../../lib/cimg-2.6.4)
-target_include_directories(union_find PRIVATE ../../include/union_find)
-add_executable(union_find_test main.cpp)
-include_directories(../union_find)
+
+################################################################
+# Configuration for pth_union_find
+################################################################
+add_library(union_find SHARED union_find.cpp union_find.h)
+
+################################################################
+# Configuration for pth_union_find_test
+################################################################
+add_executable(pth_union_find_test main.cpp)
+target_link_libraries(pth_union_find_test m pthread X11)
