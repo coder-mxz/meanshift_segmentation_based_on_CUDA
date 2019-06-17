@@ -1,5 +1,4 @@
 set(CMAKE_CXX_STANDARD 14)
-#set(CMAKE_BUILD_TYPE Release)
 add_executable(meanshift_filter_gen meanshift_filter_gen.cpp)
 add_executable(union_find_gen union_find_gen.cpp)
 add_executable(meanshift_filter_cmp meanshift_filter_cmp.cpp)

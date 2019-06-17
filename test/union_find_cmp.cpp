@@ -52,8 +52,10 @@ int main(int argc, char **argv) {
         label_map[ref[i]][test[i]]++;
     }
 
+    /// calculate region overlap ratio
     for(auto iter = label_map.begin(); iter != label_map.end(); iter++) {
-        size_t total = 0, diff_count = 0, max = 0;
+        size_t total = 0, diff_count = 0;
+        int max = 0;
         int max_label = -1;
         /// regard the most common label as the matching label
         for(auto iter2 = iter->second.begin(); iter2 != iter->second.end(); iter2++) {

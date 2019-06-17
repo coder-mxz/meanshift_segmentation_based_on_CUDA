@@ -11,6 +11,11 @@
 #include <driver_types.h>
 #endif
 
+/**
+ * @brief initialize labels array with thread gid
+ * @param labels: empty labels array
+ * @param size: size of labels array
+ */
 __global__ void _initLabels(int *labels, int size) {
     int gid = blockIdx.x * blockDim.x + threadIdx.x;
     if (gid >= size)
@@ -19,6 +24,12 @@ __global__ void _initLabels(int *labels, int size) {
     labels[gid] = gid;
 }
 
+/**
+ * @brief propagate labels link and find link root
+ * @tparam loop: maximum loop times
+ * @param prop_id: input link array
+ * @param size: size of link array
+ */
 template <int loop=8>
 __global__ void _propagateLabels(int *prop_id, int size) {
     int gid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -31,6 +42,12 @@ __global__ void _propagateLabels(int *prop_id, int size) {
     }
 }
 
+/**
+ * @brief set labels to be the same as the target pixel
+ * @param labels: input labels array
+ * @param prop_id: input link array
+ * @param size: size of link array/labels array
+ */
 __global__ void _setLabels(int *labels, int *prop_id, int size) {
     int gid = blockIdx.x * blockDim.x + threadIdx.x;
     if (gid >= size)
@@ -39,6 +56,19 @@ __global__ void _setLabels(int *labels, int *prop_id, int size) {
     labels[gid] = labels[prop_id[gid]];
 }
 
+/**
+ * @brief flooding based on shared memory
+ * @tparam blk_w: block width
+ * @tparam blk_h: block height
+ * @tparam ch: channels
+ * @tparam rad: flood radius
+ * @param in_tex: input image/vector matrix
+ * @param labels: input labels array
+ * @param prop_id: input link array
+ * @param width: input image width
+ * @param height: input image height
+ * @param color_range: maximum join threshold of || pixel1 - pixel2 ||
+ */
 template<int blk_w = 32, int blk_h = 32,
          int ch = 1, int rad = 4,
          typename std::enable_if<((((rad + blk_h) * blk_w * (ch+1)) +
@@ -227,7 +257,6 @@ namespace CuMeanShift {
                 _propagateLabels<16><<<grid2, block2>>> (prop_id, size);
                 break;
         }
-
 
         _setLabels<<<grid2, block2>>> (labels, prop_id, size);
         cudaDeviceSynchronize();

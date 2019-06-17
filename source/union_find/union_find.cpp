@@ -16,7 +16,7 @@
 #include<map>
 #include<iostream>
 #include<time.h>
-#include "union_find.h"
+#include <union_find/union_find.h>
 
 
 #define THREAD_NUM 8 ///< 线程数目
@@ -433,17 +433,6 @@ void *threadInsert(void *arg) {
     }
     pthread_exit(0);
     return NULL;
-}
-
-
-bool outputBin(const char *path, size_t count, int *data) {
-    ofstream file(path, ios_base::out | ios_base::trunc | ios_base::binary);
-    if (!file.is_open())
-        return false;
-    file.write((const char*)&count, sizeof(size_t));
-    file.write((const char *) data, count * sizeof(int));
-    file.close();
-    return true;
 }
 
 

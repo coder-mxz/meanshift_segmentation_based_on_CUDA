@@ -23,7 +23,7 @@ struct Point {
 class RAList {
 public:
     int label;
-    RAList *next;
+    RAList *cur, *next;
 
     RAList() : label(-1), cur(nullptr), next(nullptr) {}
 
@@ -54,9 +54,6 @@ public:
         }
         return exists;
     }
-
-private:
-    RAList *cur, *prev;
 };
 
 bool outputBin(const char *path, size_t count, int *data) {

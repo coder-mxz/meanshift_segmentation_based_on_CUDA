@@ -19,6 +19,16 @@
 using namespace std;
 using namespace cimg_library;
 
+bool outputBin(const char *path, size_t count, int *data) {
+    ofstream file(path, ios_base::out | ios_base::trunc | ios_base::binary);
+    if (!file.is_open())
+        return false;
+    file.write((const char*)&count, sizeof(size_t));
+    file.write((const char *) data, count * sizeof(int));
+    file.close();
+    return true;
+}
+
 /**
  * @brief: first argument: input image path,
  *         second argument: output binfile path
