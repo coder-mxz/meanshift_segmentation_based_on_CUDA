@@ -324,7 +324,7 @@ namespace CuMeanShift {
         cudaMalloc(&counter_dev, sizeof(int));
         cudaMemset(counter_dev, 0, sizeof(int));
         cudaMalloc(&labels_map, width * height * sizeof(int));
-        cudaMemset(labels_map, 0, width * height * sizeof(int))
+        cudaMemset(labels_map, 0, width * height * sizeof(int));
 
         _labelGenMap<<<grid_map, block_map>>>(new_labels, labels_map, width * height);
         _labelGenIndex<<<grid_map, block_map>>>(labels_map, counter_dev, width * height);
